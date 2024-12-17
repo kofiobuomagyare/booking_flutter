@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 // Import the home.dart file
 
 void main() {
-  runApp(NsaanoApp());
+  runApp(const NsaanoApp());
 }
 
 class NsaanoApp extends StatelessWidget {
