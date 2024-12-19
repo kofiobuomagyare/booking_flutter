@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'explore_page.dart'; 
+import 'explore_page.dart';
 import 'search_page.dart';
 import 'profile_page.dart';
 import 'screens/barbers_page.dart';
@@ -164,7 +164,7 @@ class HomeContent extends StatelessWidget {
                 ),
                 _buildCategoryIcon(
                   'Painters',
-                   HugeIcons.strokeRoundedPaintBrush02,
+                  HugeIcons.strokeRoundedPaintBrush02,
                   const Color(0xff6161b8),
                   () => Navigator.push(
                     context,
@@ -182,7 +182,7 @@ class HomeContent extends StatelessWidget {
                 ),
                 _buildCategoryIcon(
                   'Plumbers',
-                 HugeIcons.strokeRoundedWaterPump,
+                  HugeIcons.strokeRoundedWaterPump,
                   const Color(0xff6161b8),
                   () => Navigator.push(
                     context,
@@ -252,9 +252,30 @@ class HomeContent extends StatelessWidget {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
-                _buildPopularServiceItem('Salon', 'assets/images/hairshop1.jpg'),
-                _buildPopularServiceItem('Barbershop', 'assets/images/barbshop1.jpg'),
-                _buildPopularServiceItem('Salon', 'assets/images/hairshop2.jpg'),
+                _buildPopularServiceItem(
+                  'Salon',
+                  'assets/images/hairshop1.jpg',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HairdressersPage()),
+                  ),
+                ),
+                _buildPopularServiceItem(
+                  'Barbershop',
+                  'assets/images/barbshop1.jpg',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const BarbersPage()),
+                  ),
+                ),
+                _buildPopularServiceItem(
+                  'Salon',
+                  'assets/images/hairshop2.jpg',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HairdressersPage()),
+                  ),
+                ),
               ],
             ),
           ),
@@ -287,27 +308,30 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildPopularServiceItem(String label, String imagePath) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Image.asset(
-            imagePath,
-            width: 200,
-            height: 120,
-            fit: BoxFit.cover,
-          ),
-          const SizedBox(height: 8.0),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16.0,
-              fontWeight: FontWeight.bold,
+  Widget _buildPopularServiceItem(String label, String imagePath, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.asset(
+              imagePath,
+              width: 200,
+              height: 120,
+              fit: BoxFit.cover,
             ),
-          ),
-        ],
+            const SizedBox(height: 8.0),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16.0,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
