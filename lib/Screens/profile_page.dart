@@ -29,10 +29,18 @@ class ProfileScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 20),
-            const CircleAvatar(
+            CircleAvatar(
               radius: 50,
-              backgroundImage: AssetImage('assets/profile.jpg'), // Replace with actual image path
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/profile.jpg', // Replace with actual image path
+                  fit: BoxFit.cover,
+                  width: 100, // Double the radius
+                  height: 100, // Double the radius
+                ),
+              ),
             ),
+
             const SizedBox(height: 10),
             const Text(
               'KPORTIMAH GIDEON',
@@ -106,7 +114,8 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 20), // Adds space for better scrolling experience
+            const SizedBox(
+                height: 20), // Adds space for better scrolling experience
           ],
         ),
       ),
@@ -123,8 +132,8 @@ class ProfileOption extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
