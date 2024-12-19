@@ -137,11 +137,11 @@ class ProfileOption extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.purple, width: 2),
+            border: Border.all(color: const Color(0xff6161b8), width: 2),
           ),
           child: Row(
             children: [
-              Icon(icon, color: Colors.purple, size: 24),
+              Icon(icon, color: const Color(0xff6161b8), size: 24),
               const SizedBox(width: 15),
               Text(
                 label,
