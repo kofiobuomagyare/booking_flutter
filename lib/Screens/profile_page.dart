@@ -12,7 +12,7 @@ class ProfileScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
-            // Handle back navigation
+            Navigator.pop(context); // Navigate back
           },
         ),
         actions: [
@@ -33,14 +33,13 @@ class ProfileScreen extends StatelessWidget {
               radius: 50,
               child: ClipOval(
                 child: Image.asset(
-                  'assets/images/profile.jpg', // Replace with actual image path
+                  'assets/images/profile.jpg', // Replace with actual path
                   fit: BoxFit.cover,
-                  width: 100, // Double the radius
-                  height: 100, // Double the radius
+                  width: 100,
+                  height: 100,
                 ),
               ),
             ),
-
             const SizedBox(height: 10),
             const Text(
               'KPORTIMAH GIDEON',
@@ -63,35 +62,60 @@ class ProfileScreen extends StatelessWidget {
               icon: Icons.lock,
               label: 'Privacy',
               onTap: () {
-                // Handle Privacy action
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const PrivacyPage(),
+                  ),
+                );
               },
             ),
             ProfileOption(
               icon: Icons.history,
               label: 'Booking History',
               onTap: () {
-                // Handle Booking History action
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BookingHistoryPage(),
+                  ),
+                );
               },
             ),
             ProfileOption(
               icon: Icons.help_outline,
               label: 'Help & Support',
               onTap: () {
-                // Handle Help & Support action
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const HelpSupportPage(),
+                  ),
+                );
               },
             ),
             ProfileOption(
               icon: Icons.person_add,
               label: 'Invite a Friend',
               onTap: () {
-                // Handle Invite a Friend action
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const InviteFriendPage(),
+                  ),
+                );
               },
             ),
             ProfileOption(
               icon: Icons.settings,
               label: 'Settings',
               onTap: () {
-                // Handle Settings action
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsPage(),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 20),
@@ -114,8 +138,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(
-                height: 20), // Adds space for better scrolling experience
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -149,6 +172,7 @@ class ProfileOption extends StatelessWidget {
             border: Border.all(color: const Color(0xff6161b8), width: 2),
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center, // Centers the text and icon
             children: [
               Icon(icon, color: const Color(0xff6161b8), size: 24),
               const SizedBox(width: 15),
@@ -163,6 +187,67 @@ class ProfileOption extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// Dummy pages for navigation
+class PrivacyPage extends StatelessWidget {
+  const PrivacyPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Privacy')),
+      body: const Center(child: Text('Privacy Page')),
+    );
+  }
+}
+
+class BookingHistoryPage extends StatelessWidget {
+  const BookingHistoryPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Booking History')),
+      body: const Center(child: Text('Booking History Page')),
+    );
+  }
+}
+
+class HelpSupportPage extends StatelessWidget {
+  const HelpSupportPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Help & Support')),
+      body: const Center(child: Text('Help & Support Page')),
+    );
+  }
+}
+
+class InviteFriendPage extends StatelessWidget {
+  const InviteFriendPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Invite a Friend')),
+      body: const Center(child: Text('Invite a Friend Page')),
+    );
+  }
+}
+
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings')),
+      body: const Center(child: Text('Settings Page')),
     );
   }
 }
