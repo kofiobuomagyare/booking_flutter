@@ -2,21 +2,22 @@
 
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+
 import 'explore_page.dart';
-import 'search_page.dart';
 import 'profile_page.dart';
+import 'screens/apartment_page.dart';
 import 'screens/barbers_page.dart';
+import 'screens/carpenters_page.dart';
+import 'screens/electricians_page.dart';
+import 'screens/event_planners_page.dart';
 import 'screens/hairdressers_page.dart';
 import 'screens/mechanics_page.dart';
-import 'screens/carpenters_page.dart';
-import 'screens/painters_page.dart';
-import 'screens/electricians_page.dart';
-import 'screens/plumbers_page.dart';
-import 'screens/tailors_page.dart';
-import 'screens/event_planners_page.dart';
 import 'screens/nail_technicians_page.dart';
-import 'screens/apartment_page.dart';
+import 'screens/painters_page.dart';
+import 'screens/plumbers_page.dart';
 import 'screens/see_all_page.dart';
+import 'screens/tailors_page.dart';
+import 'search_page.dart';
 
 class NsaanoHomePage extends StatefulWidget {
   const NsaanoHomePage({super.key});
@@ -33,7 +34,7 @@ class _NsaanoHomePageState extends State<NsaanoHomePage> {
     const HomeContent(), // The content of your home screen
     const ExploreScreen(),
     const SearchScreen(),
-    const ProfileScreen(),
+    ProfilePage(token: '',),
   ];
 
   @override
