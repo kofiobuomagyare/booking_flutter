@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:app_develop/services/profile_service.dart';
-import 'package:app_develop/Screens/login.dart'; // Import your login page
+import 'package:flutter/material.dart';
+import 'package:app_develop/Screens/login.dart' as screens; // Add a prefix
 
 class ProfilePage extends StatelessWidget {
   final ProfileService profileService = ProfileService();
@@ -22,7 +22,7 @@ class ProfilePage extends StatelessWidget {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const LoginPage()),
+              MaterialPageRoute(builder: (context) => const screens.LoginPage()), // Use the prefix
             );
           });
           return const Center(child: CircularProgressIndicator());

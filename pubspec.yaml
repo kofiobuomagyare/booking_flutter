@@ -17,6 +17,8 @@ dependencies:
   hugeicons: ^0.0.1
   http: ^0.13.3  # Add the http package for network requests
   google_maps_flutter: ^2.10.0
+  image_picker: ^0.8.7+4 # Use the latest version
+
 
 dev_dependencies:
   flutter_test:

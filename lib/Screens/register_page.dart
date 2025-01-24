@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:app_develop/services/profile_service.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -24,51 +25,65 @@ class _RegisterPageState extends State<RegisterPage> {
   final _bioController = TextEditingController();
   String _gender = "Female"; // Default value
   String _role = "Service Provider"; // Default value
+  File? _selectedImage;
 
-  final ProfileService profileService = ProfileService();
+  Future<void> _pickImage() async {
+    final pickedImage = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedImage != null) {
+      setState(() {
+        _selectedImage = File(pickedImage.path);
+      });
+    }
+  }
 
   Future<bool> registerUser({
-  required String firstName,
-  required String lastName,
-  required String email,
-  required String password,
-  required String phoneNumber,
-  required String location,
-  required String gender,
-  required String bio,
-  required String role,
-}) async {
-  final url = Uri.parse('$baseUrl/register');
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
+    required String phoneNumber,
+    required String location,
+    required String gender,
+    required String bio,
+    required String role,
+    String? profilePicture,
+  }) async {
+    final url = Uri.parse('$baseUrl/register');
 
-  final response = await http.post(
-    url,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: json.encode({
-      'firstName': firstName,
-      'lastName': lastName,
-      'email': email,
-      'password': password,
-      'phoneNumber': phoneNumber,
-      'location': location,
-      'gender': gender,
-      'bio': bio,
-      'role': role,
-      'profilePicture': '', // Placeholder for now
-    }),
-  );
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: json.encode({
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': email,
+        'password': password,
+        'phoneNumber': phoneNumber,
+        'location': location,
+        'gender': gender,
+        'bio': bio,
+        'role': role,
+        'profilePicture': profilePicture, // Base64 string
+      }),
+    );
 
-  if (response.statusCode == 201) {
-    return true;
-  } else {
-    throw Exception('Registration failed: ${response.body}');
+    if (response.statusCode == 201) {
+      return true;
+    } else {
+      throw Exception('Registration failed: ${response.body}');
+    }
   }
-}
 
   void _register() async {
     if (_formKey.currentState?.validate() ?? false) {
       try {
+        String? base64Image;
+        if (_selectedImage != null) {
+          base64Image = base64Encode(_selectedImage!.readAsBytesSync());
+        }
+
         bool success = await registerUser(
           firstName: _firstNameController.text,
           lastName: _lastNameController.text,
@@ -79,7 +94,9 @@ class _RegisterPageState extends State<RegisterPage> {
           gender: _gender,
           bio: _bioController.text,
           role: _role,
+          profilePicture: base64Image,
         );
+
         if (success) {
           // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
@@ -172,6 +189,17 @@ class _RegisterPageState extends State<RegisterPage> {
                   validator: (value) =>
                       value?.isEmpty ?? true ? 'Please enter a brief bio' : null,
                 ),
+                const SizedBox(height: 10),
+                TextButton.icon(
+                  onPressed: _pickImage,
+                  icon: const Icon(Icons.image),
+                  label: const Text('Upload Profile Picture'),
+                ),
+                if (_selectedImage != null)
+                  Image.file(
+                    _selectedImage!,
+                    height: 150,
+                  ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _register,

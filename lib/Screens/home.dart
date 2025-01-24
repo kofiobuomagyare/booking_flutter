@@ -20,7 +20,9 @@ import 'screens/tailors_page.dart';
 import 'search_page.dart';
 
 class NsaanoHomePage extends StatefulWidget {
-  const NsaanoHomePage({super.key});
+  final String token; // Add a variable to hold the token
+
+  const NsaanoHomePage({super.key, required this.token});
 
   @override
   _NsaanoHomePageState createState() => _NsaanoHomePageState();

@@ -13,7 +13,7 @@ class NsaanoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: NsaanoHomePage(), // Reference the class from home.dart
+      home: NsaanoHomePage(token: '',), // Reference the class from home.dart
     );
   }
 }

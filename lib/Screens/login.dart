@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:app_develop/services/profile_service.dart';
-import 'package:app_develop/Screens/profile_page.dart'; // Adjust the path to your profile page
-import 'package:app_develop/Screens/register_page.dart'; // Import the register page
+import 'package:app_develop/Screens/register_page.dart';
+import 'package:app_develop/Screens/home.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,7 +15,6 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-
   final ProfileService profileService = ProfileService();
 
   // Login function
@@ -32,27 +31,62 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Use ProfileService to log in
-      final token = await profileService.loginUser(email, password);
+      final response = await profileService.loginUser(email, password);
 
-      // If successful, navigate to ProfilePage with the token
-      if (token != null) {
-        if (!mounted) return; // Ensure widget is still mounted before navigating
+      // Check if the response contains "Login successful"
+      if (response.toString().contains('Login successful')) {
+        if (!mounted) return;
+        
+        // Navigate to HomePage
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => ProfilePage(token: token)),
+          MaterialPageRoute(
+            builder: (context) => const NsaanoHomePage(token: ''), // Pass empty token for now
+          ),
         );
       } else {
-        throw Exception('Login failed');
+        // Show invalid credentials message
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Login Failed'),
+              content: const Text('Invalid credentials. Please try again.'),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('OK'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
       }
     } catch (error) {
-      if (!mounted) return; // Ensure widget is still mounted before showing SnackBar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $error')),
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: const Text('Invalid credentials. Please try again.'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
       );
     }
   }
 
-  // Navigate to Register Page
   void _navigateToRegisterPage() {
     Navigator.push(
       context,
@@ -63,7 +97,11 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(
+        title: const Text('Login'),
+        backgroundColor: const Color(0xff6161b8),
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -73,7 +111,10 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  border: OutlineInputBorder(),
+                ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -82,9 +123,13 @@ class _LoginPageState extends State<LoginPage> {
                   return null;
                 },
               ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
                 obscureText: true,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -93,19 +138,27 @@ class _LoginPageState extends State<LoginPage> {
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
                   if (_formKey.currentState?.validate() ?? false) {
                     _login();
                   }
                 },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xff6161b8),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
                 child: const Text('Login'),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               TextButton(
-                onPressed: _navigateToRegisterPage, // Navigate to register page
-                child: const Text("Don't have an account? Register here"),
+                onPressed: _navigateToRegisterPage,
+                child: const Text(
+                  "Don't have an account? Register here",
+                  style: TextStyle(color: Color(0xff6161b8)),
+                ),
               ),
             ],
           ),
