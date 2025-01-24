@@ -14,7 +14,7 @@ Real-Time Updates: The app provides instant notifications and updates for servic
 # Tech Stack
 Frontend: Flutter for building a responsive and cross-platform user interface.
 Backend: Spring Boot for robust and scalable server-side logic.
-Database: PostgreSQL for efficient data storage and management.
+Database: MySQL for efficient data storage and management.
 
 # Dependencies:
 Spring JPA for seamless database interactions.
