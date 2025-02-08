@@ -102,7 +102,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (success) {
         if (!mounted) return;
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registration successful')),
         );
@@ -111,7 +111,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString())),
       );
@@ -123,95 +123,259 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
       body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextFormField(
-                      controller: _firstNameController,
-                      decoration: const InputDecoration(labelText: 'First Name'),
-                      validator: (value) => value?.isEmpty ?? true ? 'Please enter your first name' : null,
-                    ),
-                    TextFormField(
-                      controller: _lastNameController,
-                      decoration: const InputDecoration(labelText: 'Last Name'),
-                      validator: (value) => value?.isEmpty ?? true ? 'Please enter your last name' : null,
-                    ),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(labelText: 'Email'),
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (value) {
-                        if (value?.isEmpty ?? true) return 'Please enter your email';
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    TextFormField(
-                      controller: _passwordController,
-                      decoration: const InputDecoration(labelText: 'Password'),
-                      obscureText: true,
-                      validator: (value) => (value?.length ?? 0) < 6 ? 'Password must be at least 6 characters' : null,
-                    ),
-                    TextFormField(
-                      controller: _phoneNumberController,
-                      decoration: const InputDecoration(labelText: 'Phone Number'),
-                      keyboardType: TextInputType.phone,
-                      validator: (value) => value?.isEmpty ?? true ? 'Please enter your phone number' : null,
-                    ),
-                    TextFormField(
-                      controller: _locationController,
-                      decoration: const InputDecoration(labelText: 'Location'),
-                      validator: (value) => value?.isEmpty ?? true ? 'Please enter your location' : null,
-                    ),
-                    DropdownButtonFormField<String>(
-                      value: _gender,
-                      items: const [
-                        DropdownMenuItem(value: "Male", child: Text("Male")),
-                        DropdownMenuItem(value: "Female", child: Text("Female")),
-                        DropdownMenuItem(value: "Other", child: Text("Other")),
-                      ],
-                      onChanged: (value) => setState(() => _gender = value ?? "Female"),
-                      decoration: const InputDecoration(labelText: 'Gender'),
-                    ),
-                    DropdownButtonFormField<String>(
-                      value: _role,
-                      items: const [
-                        DropdownMenuItem(value: "Service Provider", child: Text("Service Provider")),
-                        DropdownMenuItem(value: "Service Seeker", child: Text("Service Seeker")),
-                      ],
-                      onChanged: (value) => setState(() => _role = value ?? "Service Provider"),
-                      decoration: const InputDecoration(labelText: 'Role'),
-                    ),
-                    TextFormField(
-                      controller: _bioController,
-                      decoration: const InputDecoration(labelText: 'Bio'),
-                      maxLines: 3,
-                      validator: (value) => value?.isEmpty ?? true ? 'Please enter a brief bio' : null,
-                    ),
-                    const SizedBox(height: 10),
-                    TextButton.icon(
-                      onPressed: _pickImage,
-                      icon: const Icon(Icons.image),
-                      label: const Text('Upload Profile Picture'),
-                    ),
-                    if (_selectedImage != null)
-                      Image.file(_selectedImage!, height: 150),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _isLoading ? null : _register,
-                      child: Text(_isLoading ? 'Registering...' : 'Register'),
-                    ),
+          // Background with Gradient
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/background.jpg'),
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.7),
                   ],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Frosted Glass Container for Form
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.1),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              controller: _firstNameController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'First Name',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              validator: (value) => value?.isEmpty ?? true ? 'Please enter your first name' : null,
+                            ),
+                            TextFormField(
+                              controller: _lastNameController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Last Name',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              validator: (value) => value?.isEmpty ?? true ? 'Please enter your last name' : null,
+                            ),
+                            TextFormField(
+                              controller: _emailController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Email',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (value) {
+                                if (value?.isEmpty ?? true) return 'Please enter your email';
+                                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
+                                  return 'Please enter a valid email';
+                                }
+                                return null;
+                              },
+                            ),
+                            TextFormField(
+                              controller: _passwordController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Password',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              obscureText: true,
+                              validator: (value) => (value?.length ?? 0) < 6 ? 'Password must be at least 6 characters' : null,
+                            ),
+                            TextFormField(
+                              controller: _phoneNumberController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Phone Number',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              keyboardType: TextInputType.phone,
+                              validator: (value) => value?.isEmpty ?? true ? 'Please enter your phone number' : null,
+                            ),
+                            TextFormField(
+                              controller: _locationController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Location',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              validator: (value) => value?.isEmpty ?? true ? 'Please enter your location' : null,
+                            ),
+                            DropdownButtonFormField<String>(
+                              value: _gender,
+                              style: const TextStyle(color: Colors.white),
+                              dropdownColor: Colors.black.withOpacity(0.8),
+                              items: const [
+                                DropdownMenuItem(value: "Male", child: Text("Male", style: TextStyle(color: Colors.white))),
+                                DropdownMenuItem(value: "Female", child: Text("Female", style: TextStyle(color: Colors.white))),
+                                DropdownMenuItem(value: "Other", child: Text("Other", style: TextStyle(color: Colors.white))),
+                              ],
+                              onChanged: (value) => setState(() => _gender = value ?? "Female"),
+                              decoration: const InputDecoration(
+                                labelText: 'Gender',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                            DropdownButtonFormField<String>(
+                              value: _role,
+                              style: const TextStyle(color: Colors.white),
+                              dropdownColor: Colors.black.withOpacity(0.8),
+                              items: const [
+                                DropdownMenuItem(value: "Service Provider", child: Text("Service Provider", style: TextStyle(color: Colors.white))),
+                                DropdownMenuItem(value: "Service Seeker", child: Text("Service Seeker", style: TextStyle(color: Colors.white))),
+                              ],
+                              onChanged: (value) => setState(() => _role = value ?? "Service Provider"),
+                              decoration: const InputDecoration(
+                                labelText: 'Role',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                            ),
+                            TextFormField(
+                              controller: _bioController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: const InputDecoration(
+                                labelText: 'Bio',
+                                labelStyle: TextStyle(color: Colors.white),
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(color: Colors.white),
+                                ),
+                              ),
+                              maxLines: 3,
+                              validator: (value) => value?.isEmpty ?? true ? 'Please enter a brief bio' : null,
+                            ),
+                            const SizedBox(height: 10),
+                            // Modern iOS-style Upload Button
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: TextButton.icon(
+                                onPressed: _pickImage,
+                                style: TextButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.image, color: Colors.white),
+                                label: const Text(
+                                  'Upload Profile Picture',
+                                  style: TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (_selectedImage != null)
+                              Image.file(_selectedImage!, height: 150),
+                            const SizedBox(height: 20),
+                            // Modern iOS-style Register Button
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _register,
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: Colors.white,
+                                  foregroundColor: Colors.black,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: Text(
+                                  _isLoading ? 'Registering...' : 'Register',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: -0.2,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -219,7 +383,11 @@ class _RegisterPageState extends State<RegisterPage> {
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.3),
-              child: const Center(child: CircularProgressIndicator()),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
             ),
         ],
       ),
