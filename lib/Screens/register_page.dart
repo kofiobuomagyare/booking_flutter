@@ -31,6 +31,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+  final _age = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneNumberController = TextEditingController();
@@ -40,7 +41,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String _role = "Service Provider";
   File? _selectedImage;
   bool _isLoading = false;
-  final _age = TextEditingController();
+  
 
   int _selectedGenderIndex = 0;
   int _selectedRoleIndex = 0;
@@ -138,7 +139,7 @@ class _RegisterPageState extends State<RegisterPage> {
       'bio': _bioController.text,
       'role': _role,
       'profile_picture': base64Image,
-      'age': _age
+      'age': _age.text,
     };
     if (kDebugMode) {
       print('Request Body: ${json.encode(requestBody)}');
