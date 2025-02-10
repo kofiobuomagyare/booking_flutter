@@ -1,7 +1,23 @@
-import 'package:flutter/material.dart';
-import 'package:app_develop/services/profile_service.dart';
-import 'package:app_develop/Screens/register_page.dart';
-import 'package:app_develop/Screens/home.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:app_develop/Screens/service_provider_home.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:http/http.dart' as http;
+import 'home.dart'; // Ensure this file contains NsaanoHomePage and ServiceProviderHomePage
+import 'register_page.dart';
+
+// Add this constant at the top of your file
+String getBaseUrl() {
+  if (Platform.isAndroid) {
+    // Android emulator needs 10.0.2.2
+    return 'http://10.0.2.2:8080';
+  } else if (Platform.isIOS) {
+    // iOS simulator can use localhost
+    return 'http://localhost:8080';
+  }
+  // Add your production API URL here
+  return 'http://your-production-api-url.com';
+}
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,224 +27,131 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final ProfileService profileService = ProfileService();
+  final _phoneNumberController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
-  Future<void> _login() async {
-    final email = _emailController.text;
-    final password = _passwordController.text;
+  Future<void> loginUser() async {
+    if (!_formKey.currentState!.validate()) return;
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
-      return;
-    }
+    setState(() => _isLoading = true);
 
     try {
-      final response = await profileService.loginUser(email, password);
+      final response = await http.post(
+        Uri.parse('${getBaseUrl()}/api/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'phone_number': _phoneNumberController.text,
+          'password': _passwordController.text,
+        }),
+      );
 
-      if (response.toString().contains('Login successful')) {
-        if (!mounted) return;
+      if (!mounted) return;
+
+      final responseData = json.decode(response.body);
+      if (response.statusCode == 200) {
+        String role = responseData['role'];
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const NsaanoHomePage(token: ''), 
+          CupertinoPageRoute(
+            builder: (context) => role == 'Service Seeker'
+                ? NsaanoHomePage(token: responseData['token'])
+                : const ServiceProviderHome(),
           ),
         );
       } else {
-        _showErrorDialog('Invalid credentials. Please try again.');
+        throw Exception(responseData['message'] ?? 'Login failed');
       }
-    } catch (error) {
-      _showErrorDialog('Something went wrong. Please try again.');
-    }
-  }
-
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
+    } catch (e) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
           title: const Text('Error'),
-          content: Text(message),
-          actions: <Widget>[
-            TextButton(
+          content: Text(e.toString()),
+          actions: [
+            CupertinoDialogAction(
               child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.pop(context),
             ),
           ],
-        );
-      },
-    );
-  }
-
-  void _navigateToRegisterPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RegisterPage()),
-    );
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/background.jpg'),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withOpacity(0.3),
-                Colors.black.withOpacity(0.7),
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Login'),
+        backgroundColor: CupertinoColors.systemBackground,
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTextField(_phoneNumberController, 'Phone Number',
+                    keyboardType: TextInputType.phone),
+                _buildTextField(_passwordController, 'Password',
+                    isPassword: true),
+                const SizedBox(height: 24),
+                CupertinoButton.filled(
+                  onPressed: _isLoading ? null : loginUser,
+                  child: _isLoading
+                      ? const CupertinoActivityIndicator()
+                      : const Text('Login'),
+                ),
+                const SizedBox(height: 16),
+                CupertinoButton(
+                  child: const Text("Don't have an account? Register"),
+                  onPressed: () => Navigator.push(
+                    context,
+                    CupertinoPageRoute(
+                      builder: (context) => const RegisterPage(),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Frosted Glass Effect Box for Input Fields
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
-                        width: 1,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.white.withOpacity(0.1),
-                          blurRadius: 10,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                    ),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Text(
-                            'Login to Nsaano',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Email Input
-                          TextFormField(
-                            controller: _emailController,
-                            decoration: _inputDecoration('Email'),
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Password Input
-                          TextFormField(
-                            controller: _passwordController,
-                            decoration: _inputDecoration('Password'),
-                            obscureText: true,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your password';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 24),
-
-                          // Login Button
-                          ElevatedButton(
-                            onPressed: () {
-                              if (_formKey.currentState?.validate() ?? false) {
-                                _login();
-                              }
-                            },
-                            style: _elevatedButtonStyle(),
-                            child: const Text('Login'),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Register Button
-                          TextButton(
-                            onPressed: _navigateToRegisterPage,
-                            child: const Text(
-                              "Don't have an account? Register here",
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );
   }
 
-  // Input Field Decoration
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: const TextStyle(color: Colors.white),
-      filled: true,
-      fillColor: Colors.white.withOpacity(0.1),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: Colors.white),
+  Widget _buildTextField(
+    TextEditingController controller,
+    String placeholder, {
+    bool isPassword = false,
+    TextInputType? keyboardType,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: CupertinoTextField(
+        controller: controller,
+        placeholder: placeholder,
+        obscureText: isPassword,
+        keyboardType: keyboardType,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: CupertinoColors.systemGrey4),
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
     );
   }
 
-  // Elevated Button Styling
-  ButtonStyle _elevatedButtonStyle() {
-    return ElevatedButton.styleFrom(
-      backgroundColor: Colors.white,
-      foregroundColor: Colors.black,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-      ),
-      elevation: 2,
-    );
+  @override
+  void dispose() {
+    _phoneNumberController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }
