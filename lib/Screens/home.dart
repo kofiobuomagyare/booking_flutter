@@ -31,13 +31,20 @@ class NsaanoHomePage extends StatefulWidget {
 class _NsaanoHomePageState extends State<NsaanoHomePage> {
   int _currentIndex = 0; // Track the current selected tab
 
-  // List of screens for navigation
-  final List<Widget> _screens = [
-    const HomeContent(), // The content of your home screen
+// List of screens for navigation
+late List<Widget> _screens;
+
+@override
+void initState() {
+  super.initState();
+  _screens = [
+    const HomeContent(),
     const ExploreScreen(),
     const SearchScreen(),
-    ProfilePage(token: '',),
+    ProfilePage(token: widget.token), // Pass the actual token
   ];
+}
+
 
   @override
   Widget build(BuildContext context) {

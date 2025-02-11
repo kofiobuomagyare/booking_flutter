@@ -3,19 +3,16 @@ import 'dart:io';
 import 'package:app_develop/Screens/service_provider_home.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart'; // Ensure this file contains NsaanoHomePage and ServiceProviderHomePage
 import 'register_page.dart';
 
-// Add this constant at the top of your file
 String getBaseUrl() {
   if (Platform.isAndroid) {
-    // Android emulator needs 10.0.2.2
     return 'http://10.0.2.2:8080';
   } else if (Platform.isIOS) {
-    // iOS simulator can use localhost
     return 'http://localhost:8080';
   }
-  // Add your production API URL here
   return 'http://your-production-api-url.com';
 }
 
@@ -52,13 +49,22 @@ class _LoginPageState extends State<LoginPage> {
 
       final responseData = json.decode(response.body);
       if (response.statusCode == 200) {
+        String token = responseData['token'];
         String role = responseData['role'];
+
+        // Save token and role in SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', token);
+        await prefs.setString('role', role);
+
+        // Navigate to home screen based on role
         Navigator.pushReplacement(
+          // ignore: use_build_context_synchronously
           context,
           CupertinoPageRoute(
             builder: (context) => role == 'Service Seeker'
-                ? NsaanoHomePage(token: responseData['token'])
-                : const ServiceProviderHome(),
+                ? NsaanoHomePage(token: token)
+                : ServiceProviderHome(token: token),
           ),
         );
       } else {
@@ -66,6 +72,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       showCupertinoDialog(
+        // ignore: use_build_context_synchronously
         context: context,
         builder: (context) => CupertinoAlertDialog(
           title: const Text('Error'),

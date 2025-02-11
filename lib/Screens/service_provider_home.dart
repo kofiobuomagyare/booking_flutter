@@ -7,7 +7,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class ServiceProviderHome extends StatefulWidget {
-  const ServiceProviderHome({super.key});
+  const ServiceProviderHome({super.key, required String token});
 
   @override
   // ignore: library_private_types_in_public_api
