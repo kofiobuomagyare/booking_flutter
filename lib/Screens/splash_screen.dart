@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:app_develop/Screens/login.dart';
 import 'package:app_develop/Screens/register_page.dart';
@@ -7,13 +9,14 @@ class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  // ignore: unused_field
+  Timer? _navigationTimer;  // Add this line to store the timer
 
   @override
   void initState() {
@@ -27,19 +30,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
     _animationController.forward();
 
-    Timer(const Duration(seconds: 3), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const AuthPage()),
-      );
+    _navigationTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {  // Add this check
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const AuthPage()),
+        );
+      }
     });
+    
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(

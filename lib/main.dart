@@ -9,14 +9,26 @@ void main() {
   runApp(const NsaanoApp());
 }
 
-class NsaanoApp extends StatefulWidget {
+class NsaanoApp extends StatelessWidget {
   const NsaanoApp({super.key});
 
   @override
-  State<NsaanoApp> createState() => _NsaanoAppState();
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: SplashScreen(), // Changed to start with SplashScreen
+    );
+  }
 }
 
-class _NsaanoAppState extends State<NsaanoApp> {
+class NsaanoAppStateful extends StatefulWidget {
+  const NsaanoAppStateful({super.key});
+
+  @override
+  State<NsaanoAppStateful> createState() => _NsaanoAppState();
+}
+
+class _NsaanoAppState extends State<NsaanoAppStateful> {
   Widget _homeScreen = const SplashScreen(); // Default to splash screen
 
   @override
