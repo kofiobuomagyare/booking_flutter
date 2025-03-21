@@ -1,80 +1,103 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../models/service_provider.dart';
 
 class ServiceProviderCard extends StatelessWidget {
   final ServiceProvider provider;
+  final VoidCallback onTap;
 
   const ServiceProviderCard({
-    Key? key,
+    super.key,
     required this.provider,
-  }) : super(key: key);
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: InkWell(
-        onTap: () {
-          // Navigate to provider details screen
-        },
+        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: EdgeInsets.all(16.w),
+          child: Row(
             children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundImage: provider.profilePicture != null
-                        ? NetworkImage(provider.profilePicture!)
-                        : null,
-                    child: provider.profilePicture == null
-                        ? const Icon(Icons.person, size: 30)
-                        : null,
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8.r),
+                child: Image.network(
+                  provider.profileImage ?? 'https://via.placeholder.com/80',
+                  width: 80.w,
+                  height: 80.h,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 80.w,
+                      height: 80.h,
+                      color: Colors.grey[300],
+                      child: Icon(Icons.person, size: 40.w, color: Colors.grey[600]),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      provider.name,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Row(
                       children: [
+                        Icon(Icons.star, size: 16.w, color: Colors.amber),
+                        SizedBox(width: 4.w),
                         Text(
-                          provider.businessName,
-                          style: Theme.of(context).textTheme.titleLarge,
+                          provider.rating.toString(),
+                          style: TextStyle(fontSize: 14.sp),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(width: 8.w),
                         Text(
-                          provider.serviceType,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          '(${provider.totalReviews} reviews)',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey[600],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.location_on, size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      provider.location,
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    SizedBox(height: 4.h),
+                    Text(
+                      provider.serviceType,
+                      style: TextStyle(
+                        fontSize: 14.sp,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const Icon(Icons.phone, size: 16),
-                  const SizedBox(width: 4),
-                  Text(
-                    provider.phoneNumber,
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
+                    SizedBox(height: 4.h),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, size: 16.w, color: Colors.grey[600]),
+                        SizedBox(width: 4.w),
+                        Expanded(
+                          child: Text(
+                            provider.serviceAreas?.join(', ') ?? 'Location not specified',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
