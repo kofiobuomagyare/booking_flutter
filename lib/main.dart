@@ -12,6 +12,7 @@ import 'screens/home.dart';
 import 'screens/service_provider_home.dart';
 import 'screens/service_provider/login_screen.dart';
 import 'screens/service_provider/register_screen.dart';
+import 'screens/service_provider/dashboard_screen.dart';
 
 void main() {
   runApp(const NsaanoAppStateful());
@@ -78,6 +79,7 @@ class _NsaanoAppState extends State<NsaanoAppStateful> {
               '/login': (context) => const LoginPage(),
               '/service-provider-login': (context) => const ServiceProviderLoginScreen(),
               '/service-provider-register': (context) => const ServiceProviderRegisterScreen(),
+              '/service-provider-dashboard': (context) => const ServiceProviderDashboard(),
               '/home': (context) => NsaanoHomePage(token: ''),
               '/service-provider-home': (context) => ServiceProviderHome(token: ''),
             },
