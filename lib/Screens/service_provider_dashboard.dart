@@ -25,7 +25,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
               final navigator = Navigator.of(context);
               await context.read<ServiceProviderAuthProvider>().logout();
               if (mounted) {
-                navigator.pushReplacementNamed(context, '/login');
+                navigator.pushReplacementNamed('/login');
               }
             },
           ),
@@ -145,6 +145,11 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
+                final nameController = TextEditingController(text: provider.name);
+                final phoneController = TextEditingController(text: provider.phone);
+                final descriptionController = TextEditingController(text: provider.description);
+                final priceController = TextEditingController(text: provider.pricePerHour?.toString());
+
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -157,7 +162,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                             labelText: 'Name',
                             hintText: 'Enter your name',
                           ),
-                          controller: TextEditingController(text: provider.name),
+                          controller: nameController,
                         ),
                         const SizedBox(height: 16),
                         TextField(
@@ -165,7 +170,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                             labelText: 'Phone',
                             hintText: 'Enter your phone number',
                           ),
-                          controller: TextEditingController(text: provider.phone),
+                          controller: phoneController,
                         ),
                         const SizedBox(height: 16),
                         TextField(
@@ -173,7 +178,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                             labelText: 'Description',
                             hintText: 'Enter your service description',
                           ),
-                          controller: TextEditingController(text: provider.description),
+                          controller: descriptionController,
                           maxLines: 3,
                         ),
                         const SizedBox(height: 16),
@@ -182,7 +187,7 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                             labelText: 'Price per Hour',
                             hintText: 'Enter your price per hour',
                           ),
-                          controller: TextEditingController(text: provider.pricePerHour?.toString()),
+                          controller: priceController,
                           keyboardType: TextInputType.number,
                         ),
                       ],
@@ -193,9 +198,29 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                         child: const Text('Cancel'),
                       ),
                       ElevatedButton(
-                        onPressed: () {
-                          // TODO: Implement profile update logic
-                          Navigator.pop(context);
+                        onPressed: () async {
+                          try {
+                            final updatedProvider = provider.copyWith(
+                              name: nameController.text,
+                              phone: phoneController.text,
+                              description: descriptionController.text,
+                              pricePerHour: double.tryParse(priceController.text),
+                            );
+                            
+                            await context.read<ServiceProviderAuthProvider>().updateProfile(updatedProvider);
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Profile updated successfully')),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to update profile: ${e.toString()}')),
+                              );
+                            }
+                          }
                         },
                         child: const Text('Save'),
                       ),

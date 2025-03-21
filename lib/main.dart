@@ -41,7 +41,7 @@ class NsaanoApp extends StatelessWidget {
             routes: {
               '/login': (context) => const LoginPage(),
               '/home': (context) => const HomeScreen(),
-              '/map': (context) => const MapScreen(),
+              '/map': (context) => MapScreen(token: context.read<AuthProvider>().token ?? ''),
               '/service-provider-login': (context) => const ServiceProviderLoginScreen(),
               '/service-provider-dashboard': (context) => const ServiceProviderDashboard(),
             },
