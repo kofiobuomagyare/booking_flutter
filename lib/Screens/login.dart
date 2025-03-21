@@ -1,7 +1,20 @@
-import 'package:flutter/material.dart';
-import 'package:app_develop/services/profile_service.dart';
-import 'package:app_develop/Screens/register_page.dart';
-import 'package:app_develop/Screens/home.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:app_develop/Screens/service_provider_home.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'home.dart'; // Ensure this file contains NsaanoHomePage and ServiceProviderHomePage
+import 'register_page.dart';
+
+String getBaseUrl() {
+  if (Platform.isAndroid) {
+    return 'http://10.0.2.2:8080';
+  } else if (Platform.isIOS) {
+    return 'http://localhost:8080';
+  }
+  return 'http://your-production-api-url.com';
+}
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,158 +25,141 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final ProfileService profileService = ProfileService();
+  final _phoneNumberController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
-  // Login function
-  Future<void> _login() async {
-    final email = _emailController.text;
-    final password = _passwordController.text;
+  Future<void> loginUser() async {
+    if (!_formKey.currentState!.validate()) return;
 
-    if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all fields')),
-      );
-      return;
-    }
+    setState(() => _isLoading = true);
 
     try {
-      // Use ProfileService to log in
-      final response = await profileService.loginUser(email, password);
+      final response = await http.post(
+        Uri.parse('${getBaseUrl()}/api/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'phone_number': _phoneNumberController.text,
+          'password': _passwordController.text,
+        }),
+      );
 
-      // Check if the response contains "Login successful"
-      if (response.toString().contains('Login successful')) {
-        if (!mounted) return;
-        
-        // Navigate to HomePage
+      if (!mounted) return;
+
+      final responseData = json.decode(response.body);
+      if (response.statusCode == 200) {
+        String token = responseData['token'];
+        String role = responseData['role'];
+
+        // Save token and role in SharedPreferences
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', token);
+        await prefs.setString('role', role);
+
+        // Navigate to home screen based on role
         Navigator.pushReplacement(
+          // ignore: use_build_context_synchronously
           context,
-          MaterialPageRoute(
-            builder: (context) => const NsaanoHomePage(token: ''), // Pass empty token for now
+          CupertinoPageRoute(
+            builder: (context) => role == 'Service Seeker'
+                ? NsaanoHomePage(token: token)
+                : ServiceProviderHome(token: token),
           ),
         );
       } else {
-        // Show invalid credentials message
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('Login Failed'),
-              content: const Text('Invalid credentials. Please try again.'),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('OK'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
-            );
-          },
-        );
+        throw Exception(responseData['message'] ?? 'Login failed');
       }
-    } catch (error) {
-      if (!mounted) return;
-      showDialog(
+    } catch (e) {
+      showCupertinoDialog(
+        // ignore: use_build_context_synchronously
         context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Error'),
-            content: const Text('Invalid credentials. Please try again.'),
-            actions: <Widget>[
-              TextButton(
-                child: const Text('OK'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Error'),
+          content: Text(e.toString()),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('OK'),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
       );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-  }
-
-  void _navigateToRegisterPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const RegisterPage()),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-        backgroundColor: const Color(0xff6161b8),
-        foregroundColor: Colors.white,
+    return CupertinoPageScaffold(
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('Login'),
+        backgroundColor: CupertinoColors.systemBackground,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildTextField(_phoneNumberController, 'Phone Number',
+                    keyboardType: TextInputType.phone),
+                _buildTextField(_passwordController, 'Password',
+                    isPassword: true),
+                const SizedBox(height: 24),
+                CupertinoButton.filled(
+                  onPressed: _isLoading ? null : loginUser,
+                  child: _isLoading
+                      ? const CupertinoActivityIndicator()
+                      : const Text('Login'),
                 ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                CupertinoButton(
+                  child: const Text("Don't have an account? Register"),
+                  onPressed: () => Navigator.push(
+                    context,
+                    CupertinoPageRoute(
+                      builder: (context) => const RegisterPage(),
+                    ),
+                  ),
                 ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState?.validate() ?? false) {
-                    _login();
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xff6161b8),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text('Login'),
-              ),
-              const SizedBox(height: 16),
-              TextButton(
-                onPressed: _navigateToRegisterPage,
-                child: const Text(
-                  "Don't have an account? Register here",
-                  style: TextStyle(color: Color(0xff6161b8)),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildTextField(
+    TextEditingController controller,
+    String placeholder, {
+    bool isPassword = false,
+    TextInputType? keyboardType,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: CupertinoTextField(
+        controller: controller,
+        placeholder: placeholder,
+        obscureText: isPassword,
+        keyboardType: keyboardType,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: CupertinoColors.systemGrey4),
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _phoneNumberController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

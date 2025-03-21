@@ -1,12 +1,9 @@
+import 'package:app_develop/Screens/service_provider_home.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'providers/service_provider_provider.dart';
-import 'providers/auth_provider.dart';
-import 'providers/dashboard_provider.dart';
-import 'screens/home_screen.dart';
-import 'screens/service_provider_login_screen.dart';
-import 'screens/service_provider_register_screen.dart';
-import 'screens/service_provider_dashboard_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app_develop/Screens/splash_screen.dart';
+import 'package:app_develop/Screens/login.dart';
+import 'package:app_develop/Screens/home.dart'; // Ensure this has NsaanoHomePage
 
 void main() {
   runApp(const MyApp());
@@ -40,24 +37,53 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
-        if (authProvider.isLoading) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: SplashScreen(), // Changed to start with SplashScreen
+    );
+  }
+}
 
-        if (!authProvider.isAuthenticated) {
-          return const ServiceProviderLoginScreen();
-        }
+class NsaanoAppStateful extends StatefulWidget {
+  const NsaanoAppStateful({super.key});
 
-        if (authProvider.userRole == 'SERVICE_PROVIDER') {
-          return const ServiceProviderDashboardScreen();
-        }
+  @override
+  State<NsaanoAppStateful> createState() => _NsaanoAppState();
+}
 
-        return const HomeScreen();
-      },
+class _NsaanoAppState extends State<NsaanoAppStateful> {
+  Widget _homeScreen = const SplashScreen(); // Default to splash screen
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLoginStatus();
+  }
+
+  Future<void> _checkLoginStatus() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+    String? role = prefs.getString('role');
+
+    // If a token exists, go to home; otherwise, show login page
+    if (token != null && token.isNotEmpty) {
+      setState(() {
+        _homeScreen = role == 'Service Seeker'
+            ? NsaanoHomePage(token: token)
+            : ServiceProviderHome(token: token);
+      });
+    } else {
+      setState(() {
+        _homeScreen = const LoginPage();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: _homeScreen,
     );
   }
 }
