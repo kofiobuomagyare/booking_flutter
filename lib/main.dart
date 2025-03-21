@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/service_provider_auth_provider.dart';
 import 'providers/service_provider_provider.dart';
-import 'screens/login.dart';
-import 'screens/home.dart';
+import 'Screens/login_page.dart';
+import 'Screens/home_screen.dart';
+import 'Screens/map_screen.dart';
+import 'Screens/service_provider_login_screen.dart';
 import 'Screens/service_provider_dashboard.dart';
 
 void main() {
