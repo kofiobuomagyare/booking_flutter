@@ -2,9 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:app_develop/models/service_provider.dart';
-import 'package:app_develop/services/api_service.dart';
-import 'package:app_develop/screens/provider_details_screen.dart';
+import '../models/service_provider.dart';
+import '../services/api_service.dart';
+import '../screens/provider_details_screen.dart';
 
 class MapScreen extends StatefulWidget {
   final String token;
@@ -28,7 +28,8 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    _apiService = ApiService(token: widget.token);
+    _apiService = ApiService();
+    _apiService.setAuthToken(widget.token);
     _getCurrentLocation();
   }
 
@@ -45,8 +46,12 @@ class _MapScreenState extends State<MapScreen> {
 
       // Get current position
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
       );
+
+      if (!mounted) return;
 
       setState(() {
         _currentLocation = LatLng(position.latitude, position.longitude);
@@ -56,6 +61,7 @@ class _MapScreenState extends State<MapScreen> {
       // Load nearby providers
       _loadNearbyProviders();
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error getting location: $e')),
       );
@@ -73,6 +79,8 @@ class _MapScreenState extends State<MapScreen> {
         5000, // 5km radius
       );
 
+      if (!mounted) return;
+
       setState(() {
         _markers.clear();
         for (var provider in providers) {
@@ -80,6 +88,7 @@ class _MapScreenState extends State<MapScreen> {
         }
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading providers: $e')),
       );
@@ -97,20 +106,20 @@ class _MapScreenState extends State<MapScreen> {
           position: LatLng(lat, lng),
           infoWindow: InfoWindow(
             title: provider.name,
-            snippet: provider.category ?? provider.serviceType,
+            snippet: provider.serviceType,
           ),
           onTap: () => _onMarkerTapped(provider),
           icon: BitmapDescriptor.defaultMarkerWithHue(
-            _getCategoryHue(provider.category),
+            _getCategoryHue(provider.serviceType),
           ),
         ),
       );
     }
   }
 
-  double _getCategoryHue(String category) {
-    // Assign different colors for different categories
-    switch (category.toLowerCase()) {
+  double _getCategoryHue(String serviceType) {
+    // Assign different colors for different service types
+    switch (serviceType.toLowerCase()) {
       case 'plumber':
         return BitmapDescriptor.hueBlue;
       case 'electrician':
@@ -130,7 +139,6 @@ class _MapScreenState extends State<MapScreen> {
       MaterialPageRoute(
         builder: (context) => ProviderDetailsScreen(
           providerId: provider.id,
-          token: widget.token,
         ),
       ),
     );
