@@ -6,7 +6,7 @@ import 'providers/service_provider_auth_provider.dart';
 import 'providers/service_provider_provider.dart';
 import 'screens/login.dart';
 import 'screens/home.dart';
-import 'screens/service_provider_dashboard.dart';
+import 'Screens/service_provider_dashboard.dart';
 
 void main() {
   runApp(const NsaanoApp());
