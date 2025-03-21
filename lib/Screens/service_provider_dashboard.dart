@@ -22,9 +22,10 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
+              final navigator = Navigator.of(context);
               await context.read<ServiceProviderAuthProvider>().logout();
               if (mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
+                navigator.pushReplacementNamed(context, '/login');
               }
             },
           ),
@@ -144,7 +145,63 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                // TODO: Implement edit profile functionality
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Edit Profile'),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Name',
+                            hintText: 'Enter your name',
+                          ),
+                          controller: TextEditingController(text: provider.name),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Phone',
+                            hintText: 'Enter your phone number',
+                          ),
+                          controller: TextEditingController(text: provider.phone),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Description',
+                            hintText: 'Enter your service description',
+                          ),
+                          controller: TextEditingController(text: provider.description),
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          decoration: const InputDecoration(
+                            labelText: 'Price per Hour',
+                            hintText: 'Enter your price per hour',
+                          ),
+                          controller: TextEditingController(text: provider.pricePerHour?.toString()),
+                          keyboardType: TextInputType.number,
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          // TODO: Implement profile update logic
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Save'),
+                      ),
+                    ],
+                  ),
+                );
               },
               child: const Text('Edit Profile'),
             ),
