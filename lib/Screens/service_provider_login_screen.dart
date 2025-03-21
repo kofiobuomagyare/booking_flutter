@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class ServiceProviderLoginScreen extends StatefulWidget {
-  const ServiceProviderLoginScreen({Key? key}) : super(key: key);
+  const ServiceProviderLoginScreen({super.key});
 
   @override
   State<ServiceProviderLoginScreen> createState() => _ServiceProviderLoginScreenState();

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 
 class ServiceProviderRegisterScreen extends StatefulWidget {
-  const ServiceProviderRegisterScreen({Key? key}) : super(key: key);
+  const ServiceProviderRegisterScreen({super.key});
 
   @override
   State<ServiceProviderRegisterScreen> createState() => _ServiceProviderRegisterScreenState();

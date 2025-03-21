@@ -7,10 +7,10 @@ class ProviderDetailsScreen extends StatefulWidget {
   final String token;
 
   const ProviderDetailsScreen({
-    Key? key,
+    super.key,
     required this.providerId,
     required this.token,
-  }) : super(key: key);
+  });
 
   @override
   State<ProviderDetailsScreen> createState() => _ProviderDetailsScreenState();

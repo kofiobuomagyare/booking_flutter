@@ -9,7 +9,7 @@ import 'package:app_develop/screens/provider_details_screen.dart';
 class MapScreen extends StatefulWidget {
   final String token;
 
-  const MapScreen({Key? key, required this.token}) : super(key: key);
+  const MapScreen({super.key, required this.token});
 
   @override
   State<MapScreen> createState() => _MapScreenState();

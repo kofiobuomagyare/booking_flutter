@@ -5,9 +5,9 @@ class ServiceProviderCard extends StatelessWidget {
   final ServiceProvider provider;
 
   const ServiceProviderCard({
-    Key? key,
+    super.key,
     required this.provider,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
