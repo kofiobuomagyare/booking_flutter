@@ -184,4 +184,82 @@ class ApiService {
       throw Exception('Failed to update profile: $e');
     }
   }
+
+  Future<List<ServiceProvider>> searchServiceProviders(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/service-providers/search?q=$query'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => ServiceProvider.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to search service providers');
+      }
+    } catch (e) {
+      throw Exception('Error searching service providers: $e');
+    }
+  }
+
+  Future<ServiceProvider> getServiceProviderById(String id) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/service-providers/$id'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return ServiceProvider.fromJson(data);
+      } else {
+        throw Exception('Failed to get service provider');
+      }
+    } catch (e) {
+      throw Exception('Error getting service provider: $e');
+    }
+  }
+
+  Future<List<ServiceProvider>> getNearbyProviders(double latitude, double longitude, double radius) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/service-providers/nearby?lat=$latitude&lng=$longitude&radius=$radius'),
+        headers: await _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((json) => ServiceProvider.fromJson(json)).toList();
+      } else {
+        throw Exception('Failed to get nearby providers');
+      }
+    } catch (e) {
+      throw Exception('Error getting nearby providers: $e');
+    }
+  }
+
+  Future<void> bookAppointment({
+    required String providerId,
+    required DateTime date,
+    required TimeOfDay time,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/appointments'),
+        headers: await _getHeaders(),
+        body: json.encode({
+          'providerId': providerId,
+          'date': date.toIso8601String(),
+          'time': '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}',
+        }),
+      );
+
+      if (response.statusCode != 201) {
+        throw Exception('Failed to book appointment');
+      }
+    } catch (e) {
+      throw Exception('Error booking appointment: $e');
+    }
+  }
 } 

@@ -177,8 +177,28 @@ class ServiceProviderDashboard extends StatelessWidget {
                     ),
                     Switch(
                       value: provider?.isAvailable ?? false,
-                      onChanged: (value) {
-                        // TODO: Implement availability toggle
+                      onChanged: (value) async {
+                        try {
+                          await context.read<ServiceProviderAuthProvider>().updateAvailability(value);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  value ? 'You are now available' : 'You are now unavailable',
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to update availability: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       },
                     ),
                   ],

@@ -1,4 +1,3 @@
-
 class ServiceProvider {
   final String id;
   final String name;
@@ -11,6 +10,9 @@ class ServiceProvider {
   final bool isAvailable;
   final List<String>? serviceAreas;
   final Map<String, dynamic>? location;
+  final String? description;
+  final List<String>? services;
+  final double? pricePerHour;
 
   ServiceProvider({
     required this.id,
@@ -24,6 +26,9 @@ class ServiceProvider {
     required this.isAvailable,
     this.serviceAreas,
     this.location,
+    this.description,
+    this.services,
+    this.pricePerHour,
   });
 
   factory ServiceProvider.fromJson(Map<String, dynamic> json) {
@@ -39,6 +44,9 @@ class ServiceProvider {
       isAvailable: json['isAvailable'] ?? true,
       serviceAreas: json['serviceAreas']?.cast<String>(),
       location: json['location'],
+      description: json['description'],
+      services: json['services']?.cast<String>(),
+      pricePerHour: json['pricePerHour']?.toDouble(),
     );
   }
 
@@ -55,6 +63,9 @@ class ServiceProvider {
       'isAvailable': isAvailable,
       'serviceAreas': serviceAreas,
       'location': location,
+      'description': description,
+      'services': services,
+      'pricePerHour': pricePerHour,
     };
   }
 
@@ -70,6 +81,9 @@ class ServiceProvider {
     bool? isAvailable,
     List<String>? serviceAreas,
     Map<String, dynamic>? location,
+    String? description,
+    List<String>? services,
+    double? pricePerHour,
   }) {
     return ServiceProvider(
       id: id ?? this.id,
@@ -83,6 +97,9 @@ class ServiceProvider {
       isAvailable: isAvailable ?? this.isAvailable,
       serviceAreas: serviceAreas ?? this.serviceAreas,
       location: location ?? this.location,
+      description: description ?? this.description,
+      services: services ?? this.services,
+      pricePerHour: pricePerHour ?? this.pricePerHour,
     );
   }
 } 

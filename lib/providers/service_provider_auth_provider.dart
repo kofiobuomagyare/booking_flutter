@@ -112,4 +112,25 @@ class ServiceProviderAuthProvider with ChangeNotifier {
     
     notifyListeners();
   }
+
+  Future<void> updateAvailability(bool isAvailable) async {
+    if (_currentProvider == null) return;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/service-providers/${_currentProvider!.id}/availability'),
+        headers: await _getHeaders(),
+        body: json.encode({'isAvailable': isAvailable}),
+      );
+
+      if (response.statusCode == 200) {
+        _currentProvider = _currentProvider!.copyWith(isAvailable: isAvailable);
+        notifyListeners();
+      } else {
+        throw Exception('Failed to update availability');
+      }
+    } catch (e) {
+      throw Exception('Error updating availability: $e');
+    }
+  }
 } 

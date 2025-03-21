@@ -56,6 +56,22 @@ class ServiceProviderProvider with ChangeNotifier {
     }
   }
 
+  Future<ServiceProvider> getServiceProviderById(String id) async {
+    return await _apiService.getServiceProviderById(id);
+  }
+
+  Future<void> bookAppointment({
+    required String providerId,
+    required DateTime date,
+    required TimeOfDay time,
+  }) async {
+    await _apiService.bookAppointment(
+      providerId: providerId,
+      date: date,
+      time: time,
+    );
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();
