@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/service_provider.dart';
 
 class ServiceProviderAuthProvider with ChangeNotifier {
+  static const String baseUrl = 'http://localhost:8080/api'; // Update with your actual backend URL
   ServiceProvider? _currentProvider;
   String? _token;
   bool _isLoading = false;
@@ -13,6 +14,14 @@ class ServiceProviderAuthProvider with ChangeNotifier {
   String? get token => _token;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _token != null;
+
+  Map<String, String> get _headers {
+    final headers = {'Content-Type': 'application/json'};
+    if (_token != null) {
+      headers['Authorization'] = 'Bearer $_token';
+    }
+    return headers;
+  }
 
   Future<void> login(String email, String password) async {
     _isLoading = true;

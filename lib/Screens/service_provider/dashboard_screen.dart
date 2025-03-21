@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../providers/service_provider_auth_provider.dart';
-import '../../widgets/custom_button.dart';
 
 class ServiceProviderDashboard extends StatelessWidget {
   const ServiceProviderDashboard({super.key});

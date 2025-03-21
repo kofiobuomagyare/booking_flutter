@@ -114,17 +114,18 @@ class ApiService {
   Future<List<ServiceProvider>> getServiceProviders() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/service-providers/search?q=$query'),
+        Uri.parse('$baseUrl/service-providers'),
+        headers: _headers,
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         return data.map((json) => ServiceProvider.fromJson(json)).toList();
       } else {
-        throw Exception('Search failed: ${response.body}');
+        throw Exception('Failed to get service providers');
       }
     } catch (e) {
-      throw Exception('Search failed: $e');
+      throw Exception('Error getting service providers: $e');
     }
   }
 
@@ -188,8 +189,8 @@ class ApiService {
   Future<List<ServiceProvider>> searchServiceProviders(String query) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/service-providers/search?q=$query'),
-        headers: await _getHeaders(),
+        Uri.parse('$baseUrl/service-providers/search?q=$query'),
+        headers: _headers,
       );
 
       if (response.statusCode == 200) {
@@ -206,8 +207,8 @@ class ApiService {
   Future<ServiceProvider> getServiceProviderById(String id) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/service-providers/$id'),
-        headers: await _getHeaders(),
+        Uri.parse('$baseUrl/service-providers/$id'),
+        headers: _headers,
       );
 
       if (response.statusCode == 200) {
@@ -224,8 +225,8 @@ class ApiService {
   Future<List<ServiceProvider>> getNearbyProviders(double latitude, double longitude, double radius) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/service-providers/nearby?lat=$latitude&lng=$longitude&radius=$radius'),
-        headers: await _getHeaders(),
+        Uri.parse('$baseUrl/service-providers/nearby?lat=$latitude&lng=$longitude&radius=$radius'),
+        headers: _headers,
       );
 
       if (response.statusCode == 200) {
@@ -246,8 +247,8 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/appointments'),
-        headers: await _getHeaders(),
+        Uri.parse('$baseUrl/appointments'),
+        headers: _headers,
         body: json.encode({
           'providerId': providerId,
           'date': date.toIso8601String(),
