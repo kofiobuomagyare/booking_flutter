@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:app_develop/Screens/service_provider_home.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart';
@@ -55,6 +56,7 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('token', token);
         await prefs.setString('role', role);
 
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           CupertinoPageRoute(
@@ -68,8 +70,18 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Error'),
+          content: Text(e.toString()),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('OK'),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -97,7 +109,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             // Translucent overlay
-            Container(color: CupertinoColors.black.withOpacity(0.3)),
+            Container(color: CupertinoColors.black.withValues(alpha: 77)),
 
             SafeArea(
               child: Center(
@@ -171,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: CupertinoColors.white.withOpacity(0.6), // Translucent input
+          color: CupertinoColors.white.withValues(alpha: 153), // Translucent input
           borderRadius: BorderRadius.circular(8),
         ),
         child: CupertinoTextField(
