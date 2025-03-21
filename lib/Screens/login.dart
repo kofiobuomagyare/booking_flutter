@@ -4,7 +4,7 @@ import 'package:app_develop/Screens/service_provider_home.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'home.dart'; // Ensure this file contains NsaanoHomePage and ServiceProviderHomePage
+import 'home.dart';
 import 'register_page.dart';
 
 String getBaseUrl() {
@@ -20,7 +20,6 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _LoginPageState createState() => _LoginPageState();
 }
 
@@ -52,14 +51,11 @@ class _LoginPageState extends State<LoginPage> {
         String token = responseData['token'];
         String role = responseData['role'];
 
-        // Save token and role in SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', token);
         await prefs.setString('role', role);
 
-        // Navigate to home screen based on role
         Navigator.pushReplacement(
-          // ignore: use_build_context_synchronously
           context,
           CupertinoPageRoute(
             builder: (context) => role == 'Service Seeker'
@@ -72,7 +68,6 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       showCupertinoDialog(
-        // ignore: use_build_context_synchronously
         context: context,
         builder: (context) => CupertinoAlertDialog(
           title: const Text('Error'),
@@ -97,38 +92,79 @@ class _LoginPageState extends State<LoginPage> {
         middle: Text('Login'),
         backgroundColor: CupertinoColors.systemBackground,
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildTextField(_phoneNumberController, 'Phone Number',
-                    keyboardType: TextInputType.phone),
-                _buildTextField(_passwordController, 'Password',
-                    isPassword: true),
-                const SizedBox(height: 24),
-                CupertinoButton.filled(
-                  onPressed: _isLoading ? null : loginUser,
-                  child: _isLoading
-                      ? const CupertinoActivityIndicator()
-                      : const Text('Login'),
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard when tapping outside
+        child: Stack(
+          children: [
+            // Background image
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/background.jpg'),
+                  fit: BoxFit.cover,
                 ),
-                const SizedBox(height: 16),
-                CupertinoButton(
-                  child: const Text("Don't have an account? Register"),
-                  onPressed: () => Navigator.push(
-                    context,
-                    CupertinoPageRoute(
-                      builder: (context) => const RegisterPage(),
+              ),
+            ),
+            // Translucent overlay
+            Container(color: CupertinoColors.black.withOpacity(0.3)),
+
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildTextField(
+                                _phoneNumberController,
+                                'Phone Number',
+                                keyboardType: TextInputType.phone,
+                              ),
+                              _buildTextField(
+                                _passwordController,
+                                'Password',
+                                isPassword: true,
+                              ),
+                              const SizedBox(height: 24),
+                              CupertinoButton.filled(
+                                onPressed: _isLoading ? null : loginUser,
+                                child: _isLoading
+                                    ? const CupertinoActivityIndicator()
+                                    : const Text('Login'),
+                              ),
+                              const SizedBox(height: 16),
+                              CupertinoButton(
+                                child: const Text(
+                                  "Don't have an account? Register",
+                                  style: TextStyle(
+                                    color: CupertinoColors.activeBlue,
+                                    decoration: TextDecoration.underline,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(
+                                    builder: (context) => const RegisterPage(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -142,15 +178,22 @@ class _LoginPageState extends State<LoginPage> {
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: CupertinoTextField(
-        controller: controller,
-        placeholder: placeholder,
-        obscureText: isPassword,
-        keyboardType: keyboardType,
-        padding: const EdgeInsets.all(12),
+      child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: CupertinoColors.systemGrey4),
+          color: CupertinoColors.white.withOpacity(0.6), // Translucent input
           borderRadius: BorderRadius.circular(8),
+        ),
+        child: CupertinoTextField(
+          controller: controller,
+          placeholder: placeholder,
+          obscureText: isPassword,
+          keyboardType: keyboardType,
+          padding: const EdgeInsets.all(12),
+          autofocus: true, // Ensure keyboard pops up when focused
+          placeholderStyle: const TextStyle(
+            color: CupertinoColors.darkBackgroundGray,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
@@ -162,4 +205,11 @@ class _LoginPageState extends State<LoginPage> {
     _passwordController.dispose();
     super.dispose();
   }
+}
+
+void main() {
+  runApp(const CupertinoApp(
+    home: LoginPage(),
+    debugShowCheckedModeBanner: false,
+  ));
 }
