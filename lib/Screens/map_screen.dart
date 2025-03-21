@@ -9,7 +9,10 @@ import 'package:app_develop/screens/provider_details_screen.dart';
 class MapScreen extends StatefulWidget {
   final String token;
 
-  const MapScreen({super.key, required this.token});
+  const MapScreen({
+    super.key,
+    required this.token,
+  });
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -73,25 +76,34 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _markers.clear();
         for (var provider in providers) {
-          _markers.add(
-            Marker(
-              markerId: MarkerId(provider.id),
-              position: provider.location,
-              infoWindow: InfoWindow(
-                title: provider.name,
-                snippet: provider.category,
-              ),
-              onTap: () => _onMarkerTapped(provider),
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                _getCategoryHue(provider.category),
-              ),
-            ),
-          );
+          _addProviderMarker(provider);
         }
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading providers: $e')),
+      );
+    }
+  }
+
+  void _addProviderMarker(ServiceProvider provider) {
+    if (provider.location != null) {
+      final lat = provider.location!['latitude'] as double;
+      final lng = provider.location!['longitude'] as double;
+      
+      _markers.add(
+        Marker(
+          markerId: MarkerId(provider.id),
+          position: LatLng(lat, lng),
+          infoWindow: InfoWindow(
+            title: provider.name,
+            snippet: provider.category ?? provider.serviceType,
+          ),
+          onTap: () => _onMarkerTapped(provider),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            _getCategoryHue(provider.category),
+          ),
+        ),
       );
     }
   }

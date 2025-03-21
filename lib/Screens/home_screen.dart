@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../providers/service_provider_provider.dart';
-import '../models/service_provider.dart';
 import '../widgets/service_provider_card.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -15,10 +15,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // Load service providers when the screen initializes
-    Future.microtask(() =>
-        Provider.of<ServiceProviderProvider>(context, listen: false)
-            .loadServiceProviders());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ServiceProviderProvider>().loadServiceProviders();
+      }
+    });
   }
 
   @override
@@ -26,14 +27,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Nsaano'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () {
-              // Navigate to search screen
-            },
-          ),
-        ],
       ),
       body: Consumer<ServiceProviderProvider>(
         builder: (context, provider, child) {
@@ -43,35 +36,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (provider.error != null) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Error: ${provider.error}',
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => provider.loadServiceProviders(),
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: Text(
+                provider.error!,
+                style: const TextStyle(color: Colors.red),
               ),
             );
           }
 
-          if (provider.providers.isEmpty) {
-            return const Center(
-              child: Text('No service providers available'),
-            );
-          }
-
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             itemCount: provider.providers.length,
             itemBuilder: (context, index) {
               final serviceProvider = provider.providers[index];
-              return ServiceProviderCard(provider: serviceProvider);
+              return ServiceProviderCard(
+                provider: serviceProvider,
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    '/provider-details',
+                    arguments: serviceProvider.id,
+                  );
+                },
+              );
             },
           );
         },

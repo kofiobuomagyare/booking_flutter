@@ -13,6 +13,7 @@ class ServiceProvider {
   final String? description;
   final List<String>? services;
   final double? pricePerHour;
+  final String? category;
 
   ServiceProvider({
     required this.id,
@@ -29,6 +30,7 @@ class ServiceProvider {
     this.description,
     this.services,
     this.pricePerHour,
+    this.category,
   });
 
   factory ServiceProvider.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class ServiceProvider {
       description: json['description'],
       services: json['services']?.cast<String>(),
       pricePerHour: json['pricePerHour']?.toDouble(),
+      category: json['category'],
     );
   }
 
@@ -66,6 +69,7 @@ class ServiceProvider {
       'description': description,
       'services': services,
       'pricePerHour': pricePerHour,
+      'category': category,
     };
   }
 
@@ -84,6 +88,7 @@ class ServiceProvider {
     String? description,
     List<String>? services,
     double? pricePerHour,
+    String? category,
   }) {
     return ServiceProvider(
       id: id ?? this.id,
@@ -100,6 +105,7 @@ class ServiceProvider {
       description: description ?? this.description,
       services: services ?? this.services,
       pricePerHour: pricePerHour ?? this.pricePerHour,
+      category: category ?? this.category,
     );
   }
 } 

@@ -127,8 +127,8 @@ class ServiceProviderAuthProvider with ChangeNotifier {
 
     try {
       final response = await http.patch(
-        Uri.parse('$baseUrl/api/service-providers/${_currentProvider!.id}/availability'),
-        headers: await _getHeaders(),
+        Uri.parse('$baseUrl/service-providers/${_currentProvider!.id}/availability'),
+        headers: _headers,
         body: json.encode({'isAvailable': isAvailable}),
       );
 
