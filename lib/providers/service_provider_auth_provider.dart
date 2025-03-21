@@ -142,4 +142,30 @@ class ServiceProviderAuthProvider with ChangeNotifier {
       throw Exception('Error updating availability: $e');
     }
   }
+
+  Future<void> updateProfile(ServiceProvider updatedProvider) async {
+    if (_currentProvider == null) return;
+
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/service-providers/${_currentProvider!.id}'),
+        headers: _headers,
+        body: json.encode(updatedProvider.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        _currentProvider = updatedProvider;
+        
+        // Update stored provider data
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('provider_data', json.encode(updatedProvider.toJson()));
+        
+        notifyListeners();
+      } else {
+        throw Exception('Failed to update profile: ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error updating profile: $e');
+    }
+  }
 } 

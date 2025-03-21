@@ -207,10 +207,13 @@ class _ServiceProviderDashboardState extends State<ServiceProviderDashboard> {
                               pricePerHour: double.tryParse(priceController.text),
                             );
                             
+                            final navigator = Navigator.of(context);
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
                             await context.read<ServiceProviderAuthProvider>().updateProfile(updatedProvider);
+                            
                             if (mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              navigator.pop();
+                              scaffoldMessenger.showSnackBar(
                                 const SnackBar(content: Text('Profile updated successfully')),
                               );
                             }
