@@ -22,6 +22,7 @@ dependencies:
   carousel_slider: ^5.0.0
   flutter_dotenv: ^5.2.1
   shared_preferences: ^2.5.2
+  provider: ^6.1.1  # Add provider package for state management
 
 
 dev_dependencies:

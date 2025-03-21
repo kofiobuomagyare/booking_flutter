@@ -1,47 +1,20 @@
-import 'package:app_develop/Screens/service_provider_home.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app_develop/Screens/splash_screen.dart';
-import 'package:app_develop/Screens/login.dart';
-import 'package:app_develop/Screens/home.dart'; // Ensure this has NsaanoHomePage
+import 'providers/service_provider_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/dashboard_provider.dart';
+import 'providers/service_provider_auth_provider.dart';
+import 'screens/splash_screen.dart';
+import 'screens/login.dart';
+import 'screens/home.dart';
+import 'screens/service_provider_home.dart';
+import 'screens/service_provider/login_screen.dart';
+import 'screens/service_provider/register_screen.dart';
 
 void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ServiceProviderProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider()),
-      ],
-      child: MaterialApp(
-        title: 'Nsaano',
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          useMaterial3: true,
-        ),
-        home: const AuthWrapper(),
-      ),
-    );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: SplashScreen(), // Changed to start with SplashScreen
-    );
-  }
+  runApp(const NsaanoAppStateful());
 }
 
 class NsaanoAppStateful extends StatefulWidget {
@@ -52,7 +25,7 @@ class NsaanoAppStateful extends StatefulWidget {
 }
 
 class _NsaanoAppState extends State<NsaanoAppStateful> {
-  Widget _homeScreen = const SplashScreen(); // Default to splash screen
+  Widget _homeScreen = const SplashScreen();
 
   @override
   void initState() {
@@ -65,7 +38,6 @@ class _NsaanoAppState extends State<NsaanoAppStateful> {
     String? token = prefs.getString('token');
     String? role = prefs.getString('role');
 
-    // If a token exists, go to home; otherwise, show login page
     if (token != null && token.isNotEmpty) {
       setState(() {
         _homeScreen = role == 'Service Seeker'
@@ -81,9 +53,37 @@ class _NsaanoAppState extends State<NsaanoAppStateful> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: _homeScreen,
+    return ScreenUtilInit(
+      designSize: const Size(375, 812),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => ServiceProviderProvider()),
+            ChangeNotifierProvider(create: (_) => AuthProvider()),
+            ChangeNotifierProvider(create: (_) => DashboardProvider()),
+            ChangeNotifierProvider(create: (_) => ServiceProviderAuthProvider()),
+          ],
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Nsaano',
+            theme: ThemeData(
+              primarySwatch: Colors.blue,
+              useMaterial3: true,
+            ),
+            initialRoute: '/',
+            routes: {
+              '/': (context) => _homeScreen,
+              '/login': (context) => const LoginPage(),
+              '/service-provider-login': (context) => const ServiceProviderLoginScreen(),
+              '/service-provider-register': (context) => const ServiceProviderRegisterScreen(),
+              '/home': (context) => NsaanoHomePage(token: ''),
+              '/service-provider-home': (context) => ServiceProviderHome(token: ''),
+            },
+          ),
+        );
+      },
     );
   }
 }

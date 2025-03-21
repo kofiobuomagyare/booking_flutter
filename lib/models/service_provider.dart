@@ -1,49 +1,89 @@
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class ServiceProvider {
-  final int id;
-  final String businessName;
+  final String id;
+  final String name;
   final String email;
-  final String phoneNumber;
+  final String phone;
   final String serviceType;
-  final String location;
-  final String? profilePicture;
-  final String serviceProviderId;
+  final String? profileImage;
+  final double rating;
+  final int totalReviews;
+  final bool isAvailable;
+  final List<String>? serviceAreas;
+  final Map<String, dynamic>? location;
 
   ServiceProvider({
     required this.id,
-    required this.businessName,
+    required this.name,
     required this.email,
-    required this.phoneNumber,
+    required this.phone,
     required this.serviceType,
-    required this.location,
-    this.profilePicture,
-    required this.serviceProviderId,
+    this.profileImage,
+    required this.rating,
+    required this.totalReviews,
+    required this.isAvailable,
+    this.serviceAreas,
+    this.location,
   });
 
   factory ServiceProvider.fromJson(Map<String, dynamic> json) {
     return ServiceProvider(
       id: json['id'],
-      businessName: json['businessName'],
+      name: json['name'],
       email: json['email'],
-      phoneNumber: json['phoneNumber'],
+      phone: json['phone'],
       serviceType: json['serviceType'],
+      profileImage: json['profileImage'],
+      rating: json['rating']?.toDouble() ?? 0.0,
+      totalReviews: json['totalReviews'] ?? 0,
+      isAvailable: json['isAvailable'] ?? true,
+      serviceAreas: json['serviceAreas']?.cast<String>(),
       location: json['location'],
-      profilePicture: json['profilePicture'],
-      serviceProviderId: json['service_provider_id'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'businessName': businessName,
+      'name': name,
       'email': email,
-      'phoneNumber': phoneNumber,
+      'phone': phone,
       'serviceType': serviceType,
+      'profileImage': profileImage,
+      'rating': rating,
+      'totalReviews': totalReviews,
+      'isAvailable': isAvailable,
+      'serviceAreas': serviceAreas,
       'location': location,
-      'profilePicture': profilePicture,
-      'service_provider_id': serviceProviderId,
     };
+  }
+
+  ServiceProvider copyWith({
+    String? id,
+    String? name,
+    String? email,
+    String? phone,
+    String? serviceType,
+    String? profileImage,
+    double? rating,
+    int? totalReviews,
+    bool? isAvailable,
+    List<String>? serviceAreas,
+    Map<String, dynamic>? location,
+  }) {
+    return ServiceProvider(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      serviceType: serviceType ?? this.serviceType,
+      profileImage: profileImage ?? this.profileImage,
+      rating: rating ?? this.rating,
+      totalReviews: totalReviews ?? this.totalReviews,
+      isAvailable: isAvailable ?? this.isAvailable,
+      serviceAreas: serviceAreas ?? this.serviceAreas,
+      location: location ?? this.location,
+    );
   }
 } 
