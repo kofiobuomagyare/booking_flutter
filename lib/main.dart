@@ -15,42 +15,11 @@ import 'screens/service_provider/register_screen.dart';
 import 'screens/service_provider/dashboard_screen.dart';
 
 void main() {
-  runApp(const NsaanoAppStateful());
+  runApp(const NsaanoApp());
 }
 
-class NsaanoAppStateful extends StatefulWidget {
-  const NsaanoAppStateful({super.key});
-
-  @override
-  State<NsaanoAppStateful> createState() => _NsaanoAppState();
-}
-
-class _NsaanoAppState extends State<NsaanoAppStateful> {
-  Widget _homeScreen = const SplashScreen();
-
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginStatus();
-  }
-
-  Future<void> _checkLoginStatus() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
-    String? role = prefs.getString('role');
-
-    if (token != null && token.isNotEmpty) {
-      setState(() {
-        _homeScreen = role == 'Service Seeker'
-            ? NsaanoHomePage(token: token)
-            : ServiceProviderHome(token: token);
-      });
-    } else {
-      setState(() {
-        _homeScreen = const LoginPage();
-      });
-    }
-  }
+class NsaanoApp extends StatelessWidget {
+  const NsaanoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -61,10 +30,9 @@ class _NsaanoAppState extends State<NsaanoAppStateful> {
       builder: (context, child) {
         return MultiProvider(
           providers: [
-            ChangeNotifierProvider(create: (_) => ServiceProviderProvider()),
             ChangeNotifierProvider(create: (_) => AuthProvider()),
-            ChangeNotifierProvider(create: (_) => DashboardProvider()),
             ChangeNotifierProvider(create: (_) => ServiceProviderAuthProvider()),
+            ChangeNotifierProvider(create: (_) => ServiceProviderProvider()),
           ],
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
@@ -73,15 +41,11 @@ class _NsaanoAppState extends State<NsaanoAppStateful> {
               primarySwatch: Colors.blue,
               useMaterial3: true,
             ),
-            initialRoute: '/',
+            initialRoute: '/login',
             routes: {
-              '/': (context) => _homeScreen,
               '/login': (context) => const LoginPage(),
-              '/service-provider-login': (context) => const ServiceProviderLoginScreen(),
-              '/service-provider-register': (context) => const ServiceProviderRegisterScreen(),
-              '/service-provider-dashboard': (context) => const ServiceProviderDashboard(),
-              '/home': (context) => NsaanoHomePage(token: ''),
-              '/service-provider-home': (context) => ServiceProviderHome(token: ''),
+              '/home': (context) => const HomeScreen(),
+              '/provider-dashboard': (context) => const ServiceProviderDashboard(),
             },
           ),
         );

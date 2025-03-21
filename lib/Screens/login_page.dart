@@ -87,7 +87,14 @@ class _LoginPageState extends State<LoginPage> {
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: CupertinoColors.white.withOpacity(0.8),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue.withValues(alpha: 200),
+              Colors.blue.shade700.withValues(alpha: 200),
+            ],
+          ),
           borderRadius: BorderRadius.circular(8),
         ),
         child: CupertinoTextField(

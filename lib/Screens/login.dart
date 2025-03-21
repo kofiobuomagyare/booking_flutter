@@ -67,18 +67,9 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception(responseData['message'] ?? 'Login failed');
       }
     } catch (e) {
-      showCupertinoDialog(
-        context: context,
-        builder: (context) => CupertinoAlertDialog(
-          title: const Text('Error'),
-          content: Text(e.toString()),
-          actions: [
-            CupertinoDialogAction(
-              child: const Text('OK'),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ],
-        ),
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
