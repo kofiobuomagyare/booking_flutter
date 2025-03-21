@@ -64,7 +64,9 @@ class ServiceProviderProvider with ChangeNotifier {
     required String providerId,
     required DateTime date,
     required TimeOfDay time,
+    required String token,
   }) async {
+    _apiService.setAuthToken(token);
     await _apiService.bookAppointment(
       providerId: providerId,
       date: date,

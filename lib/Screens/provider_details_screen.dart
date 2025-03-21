@@ -6,10 +6,12 @@ import '../providers/service_provider_provider.dart';
 
 class ProviderDetailsScreen extends StatefulWidget {
   final String providerId;
+  final String token;
 
   const ProviderDetailsScreen({
     super.key,
     required this.providerId,
+    required this.token,
   });
 
   @override
@@ -85,6 +87,7 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
         providerId: widget.providerId,
         date: _selectedDate!,
         time: _selectedTime!,
+        token: widget.token,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
