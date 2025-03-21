@@ -139,6 +139,7 @@ class _MapScreenState extends State<MapScreen> {
       MaterialPageRoute(
         builder: (context) => ProviderDetailsScreen(
           providerId: provider.id,
+          token: widget.token,
         ),
       ),
     );
