@@ -44,7 +44,7 @@ class NsaanoApp extends StatelessWidget {
             initialRoute: '/login',
             routes: {
               '/login': (context) => const LoginPage(),
-              '/home': (context) => const NsaanoHomePage(),
+              '/home': (context) => const NsaanoHomePage(token: ''),
               '/provider-dashboard': (context) => const ServiceProviderDashboard(),
             },
           ),
