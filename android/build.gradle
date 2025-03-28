@@ -11,6 +11,9 @@ allprojects {
         google()
         mavenCentral()
     }
+    // dependencyLocking {
+    //     lockAllConfigurations()
+    // }
 }
 
 rootProject.buildDir = "../build"
