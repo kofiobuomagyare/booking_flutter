@@ -5,7 +5,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 
 class ExploreScreen extends StatefulWidget {
-  const ExploreScreen({super.key});
+  final String token;
+
+  const ExploreScreen({
+    super.key,
+    required this.token,
+  });
 
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();

@@ -1,35 +1,22 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/service_provider_auth_provider.dart';
 
-// Add this constant at the top of your file
-String getBaseUrl() {
-  if (Platform.isAndroid) {
-    // Android emulator needs 10.0.2.2
-    return 'http://10.0.2.2:8080';
-  } else if (Platform.isIOS) {
-    // iOS simulator can use localhost
-    return 'http://localhost:8080';
-  }
-  // Add your production API URL here
-  return 'http://your-production-api-url.com';
-}
-
-class RegisterPage extends StatefulWidget {
-  const RegisterPage({super.key});
+class ServiceProviderRegisterScreen extends StatefulWidget {
+  const ServiceProviderRegisterScreen({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  State<ServiceProviderRegisterScreen> createState() => _ServiceProviderRegisterScreenState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _ServiceProviderRegisterScreenState extends State<ServiceProviderRegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
+  final _serviceTypeController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -38,6 +25,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _emailController.dispose();
     _passwordController.dispose();
     _phoneController.dispose();
+    _serviceTypeController.dispose();
     super.dispose();
   }
 
@@ -47,15 +35,16 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      await context.read<AuthProvider>().register(
+      await context.read<ServiceProviderAuthProvider>().register(
         name: _nameController.text,
         email: _emailController.text,
         password: _passwordController.text,
         phone: _phoneController.text,
+        serviceType: _serviceTypeController.text,
       );
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushReplacementNamed(context, '/provider-dashboard');
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,7 +61,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Register'),
+        title: const Text('Register as Service Provider'),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(16.w),
@@ -133,6 +122,17 @@ class _RegisterPageState extends State<RegisterPage> {
                   return null;
                 },
               ),
+              SizedBox(height: 16.h),
+              TextFormField(
+                controller: _serviceTypeController,
+                decoration: const InputDecoration(labelText: 'Service Type'),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your service type';
+                  }
+                  return null;
+                },
+              ),
               SizedBox(height: 24.h),
               ElevatedButton(
                 onPressed: _isLoading ? null : _register,
@@ -146,4 +146,4 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
-}
+} 

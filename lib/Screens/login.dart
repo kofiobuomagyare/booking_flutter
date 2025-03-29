@@ -20,7 +20,7 @@ class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
@@ -55,6 +55,7 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('token', token);
         await prefs.setString('role', role);
 
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           CupertinoPageRoute(
@@ -67,6 +68,7 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception(responseData['message'] ?? 'Login failed');
       }
     } catch (e) {
+      if (!mounted) return;
       showCupertinoDialog(
         context: context,
         builder: (context) => CupertinoAlertDialog(
@@ -106,7 +108,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             // Translucent overlay
-            Container(color: CupertinoColors.black.withOpacity(0.3)),
+            Container(color: CupertinoColors.black.withValues(alpha: 77)),
 
             SafeArea(
               child: Center(
@@ -180,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: CupertinoColors.white.withOpacity(0.6), // Translucent input
+          color: CupertinoColors.white.withValues(alpha: 153), // Translucent input
           borderRadius: BorderRadius.circular(8),
         ),
         child: CupertinoTextField(

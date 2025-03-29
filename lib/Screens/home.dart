@@ -39,7 +39,7 @@ void initState() {
   super.initState();
   _screens = [
     const HomeContent(),
-    const ExploreScreen(),
+    ExploreScreen(token: widget.token),
     const SearchScreen(),
     ProfilePage(token: widget.token), // Pass the actual token
   ];
