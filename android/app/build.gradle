@@ -1,5 +1,5 @@
 plugins {
-    id "com.android.application" version "8.1.2" apply false
+    id "com.android.application"
     id "kotlin-android"
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
@@ -7,8 +7,9 @@ plugins {
 
 android {
     namespace = "com.example.app_develop"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 34 // Change from flutter.compileSdkVersion to a fixed number
     ndkVersion = flutter.ndkVersion
+   
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -28,6 +29,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled true
        // Use MAPS_API_KEY from local.properties
         manifestPlaceholders["MAPS_API_KEY"] = project.findProperty("MAPS_API_KEY") ?: ""
 
@@ -43,9 +45,11 @@ android {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version" // Fix conflict
     implementation 'com.google.android.gms:play-services-maps:18.2.0'
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
+
 
 flutter {
     source = "../.."

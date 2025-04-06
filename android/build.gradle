@@ -1,8 +1,12 @@
 buildscript {
-    ext.kotlin_version = '1.9.22'
+    ext.kotlin_version = '1.9.24' // Update to latest stable version
     repositories {
         google()
         mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:8.2.1" // Use latest AGP
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -11,9 +15,10 @@ allprojects {
         google()
         mavenCentral()
     }
-    dependencyLocking {
-        lockAllConfigurations()
-    }
+    //dependencyLocking {
+        // 🔥 Disable dependency locking for now (causing version mismatch)
+        //lockAllConfigurations()
+   // }
 }
 
 rootProject.buildDir = "../build"

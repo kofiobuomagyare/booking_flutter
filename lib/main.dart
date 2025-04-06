@@ -1,14 +1,16 @@
+import 'package:app_develop/Screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/service_provider_auth_provider.dart';
 import 'providers/service_provider_provider.dart';
-import 'Screens/login_page.dart';
+import 'Screens/login.dart';
 import 'Screens/home_screen.dart';
 import 'Screens/map_screen.dart';
 import 'Screens/service_provider_login_screen.dart';
 import 'Screens/service_provider_dashboard.dart';
+
 
 void main() {
   runApp(const NsaanoApp());
@@ -37,8 +39,9 @@ class NsaanoApp extends StatelessWidget {
               primarySwatch: Colors.blue,
               useMaterial3: true,
             ),
-            initialRoute: '/login',
+            initialRoute: '/splash',
             routes: {
+              '/splash': (context) => const SplashScreen(),
               '/login': (context) => const LoginPage(),
               '/home': (context) => const HomeScreen(),
               '/map': (context) => MapScreen(token: context.read<AuthProvider>().token ?? ''),

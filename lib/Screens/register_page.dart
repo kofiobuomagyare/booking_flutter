@@ -1,21 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
-
-// Add this constant at the top of your file
-String getBaseUrl() {
-  if (Platform.isAndroid) {
-    // Android emulator needs 10.0.2.2
-    return 'http://10.0.2.2:8080';
-  } else if (Platform.isIOS) {
-    // iOS simulator can use localhost
-    return 'http://localhost:8080';
-  }
-  // Add your production API URL here
-  return 'http://your-production-api-url.com';
-}
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -30,6 +17,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
+  XFile? _profilePicture;
   bool _isLoading = false;
 
   @override
@@ -41,18 +29,59 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissions();  // Check permissions when the page is initialized
+  }
+
+  Future<void> _checkPermissions() async {
+    var cameraStatus = await Permission.camera.status;
+    var storageStatus = await Permission.storage.status;
+
+    // Check if permissions are granted
+    if (!cameraStatus.isGranted || !storageStatus.isGranted) {
+      // Request permissions if not already granted
+      await Permission.camera.request();
+      await Permission.storage.request();
+    }
+  }
+
+  Future<void> _pickImage() async {
+    // Ensure permissions are granted before picking an image
+    var cameraPermission = await Permission.camera.request();
+    var storagePermission = await Permission.storage.request();
+
+    if (cameraPermission.isGranted && storagePermission.isGranted) {
+      // Pick image from the camera
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+      if (pickedFile != null) {
+        setState(() {
+          _profilePicture = pickedFile;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No image selected')),
+        );
+      }
+    } else {
+      // Handle permission denial
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Camera or storage permission denied')),
+      );
+    }
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      await context.read<AuthProvider>().register(
-        name: _nameController.text,
-        email: _emailController.text,
-        password: _passwordController.text,
-        phone: _phoneController.text,
-      );
+      // Registration logic goes here
+      // You can pass _profilePicture.path to the backend API if needed for the profile picture
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
@@ -132,6 +161,19 @@ class _RegisterPageState extends State<RegisterPage> {
                   }
                   return null;
                 },
+              ),
+              SizedBox(height: 24.h),
+              GestureDetector(
+                onTap: _pickImage,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: _profilePicture == null
+                      ? AssetImage('assets/images/default_avatar.jpg') as ImageProvider
+                      : FileImage(File(_profilePicture!.path)),
+                  child: _profilePicture == null
+                      ? Icon(Icons.camera_alt, size: 40, color: Colors.white)
+                      : null,
+                ),
               ),
               SizedBox(height: 24.h),
               ElevatedButton(

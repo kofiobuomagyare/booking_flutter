@@ -9,11 +9,13 @@ import 'register_page.dart';
 
 String getBaseUrl() {
   if (Platform.isAndroid) {
-    return 'http://10.0.2.2:8080';
-  } else if (Platform.isIOS) {
-    return 'http://localhost:8080';
-  }
-  return 'http://your-production-api-url.com';
+  return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for Android
+} else if (Platform.isIOS) {
+  return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for iOS
+} else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+  return 'http://localhost:8080'; // Use localhost for local testing on PC
+}
+return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Default for other cases
 }
 
 class LoginPage extends StatefulWidget {
@@ -108,7 +110,8 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
             // Translucent overlay
-            Container(color: CupertinoColors.black.withValues(alpha: 77)),
+            Container(color: CupertinoColors.black.withValues(alpha: 0.3)),
+
 
             SafeArea(
               child: Center(

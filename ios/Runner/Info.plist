@@ -49,6 +49,9 @@
 <string>We need your location to show nearby services</string>
 <key>NSLocationAlwaysUsageDescription</key>
 <string>We need your location to provide accurate services</string>
-
+<key>NSPhotoLibraryUsageDescription</key>
+<string>We need access to your photo library to allow you to select a profile picture.</string>
+<key>NSCameraUsageDescription</key>
+<string>We need access to your camera to allow you to take a profile picture.</string>
 </dict>
 </plist>
