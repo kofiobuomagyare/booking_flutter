@@ -128,19 +128,20 @@ Future<bool> _isAndroid13OrAbove() async {
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'firstName': _nameController.text.split(" ")[0],
-          'lastName': _nameController.text.split(" ")[1],
-          'email': _emailController.text,
-          'password': _passwordController.text,
-          'phoneNumber': _phoneController.text,
-          'age': int.tryParse(_selectedAge ?? '0'),
-          'gender': _selectedGender,
-          'profilePicture': _profilePicture?.path ?? '',
-          'role': 'User',
-          'address': _addressController.text,
-          'bio': _bioController.text,
-        }),
+       body: json.encode({
+  'first_name': _nameController.text.split(" ")[0],
+  'last_name': _nameController.text.split(" ")[1],
+  'email': _emailController.text,
+  'password': _passwordController.text,
+  'phone_number': _phoneController.text,
+  'age': int.tryParse(_selectedAge ?? '0'),
+  'gender': _selectedGender,
+  'profile_picture': _profilePicture?.path ?? '',
+  'role': 'User',
+  'address': _addressController.text,
+  'bio': _bioController.text,
+}),
+
       );
 
       if (response.statusCode == 200) {
