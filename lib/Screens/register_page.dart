@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:http/http.dart' as http;
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -17,6 +19,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _phoneController = TextEditingController();
+  String? _selectedAge;
+  String? _selectedGender;
   XFile? _profilePicture;
   bool _isLoading = false;
 
@@ -80,21 +84,57 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
-      // Registration logic goes here
-      // You can pass _profilePicture.path to the backend API if needed for the profile picture
+      final url = getRegisterUrl(); // Get the registration API URL
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'firstName': _nameController.text.split(" ")[0],
+          'lastName': _nameController.text.split(" ")[1],
+          'email': _emailController.text,
+          'password': _passwordController.text,
+          'phoneNumber': _phoneController.text,
+          'age': _selectedAge,
+          'gender': _selectedGender,
+          'profilePicture': _profilePicture?.path ?? '',
+          'role': 'User',
+        }),
+      );
 
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
+      if (response.statusCode == 200) {
+        // Successfully registered
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        // Handle failure
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration failed: ${response.body}')),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text('Error: $e')),
       );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  String getBaseUrl() {
+    if (Platform.isAndroid) {
+      return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for Android
+    } else if (Platform.isIOS) {
+      return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for iOS
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      return 'http://localhost:8080'; // Use localhost for local testing on PC
+    }
+    return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Default for other cases
+  }
+
+  String getRegisterUrl() {
+    return '${getBaseUrl()}/api/register'; // Add the registration endpoint to the base URL
   }
 
   @override
@@ -112,10 +152,10 @@ class _RegisterPageState extends State<RegisterPage> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: const InputDecoration(labelText: 'Full Name'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your name';
+                    return 'Please enter your full name';
                   }
                   return null;
                 },
@@ -158,6 +198,50 @@ class _RegisterPageState extends State<RegisterPage> {
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your phone number';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16.h),
+              DropdownButtonFormField<String>(
+                value: _selectedAge,
+                hint: const Text('Select Age'),
+                items: ['18', '19', '20', '21', '22', '23', '24', '25']
+                    .map((age) => DropdownMenuItem(
+                          value: age,
+                          child: Text(age),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedAge = value;
+                  });
+                },
+                validator: (value) {
+                  if (value == null) {
+                    return 'Please select your age';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 16.h),
+              DropdownButtonFormField<String>(
+                value: _selectedGender,
+                hint: const Text('Select Gender'),
+                items: ['Male', 'Female', 'Other']
+                    .map((gender) => DropdownMenuItem(
+                          value: gender,
+                          child: Text(gender),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedGender = value;
+                  });
+                },
+                validator: (value) {
+                  if (value == null) {
+                    return 'Please select your gender';
                   }
                   return null;
                 },
