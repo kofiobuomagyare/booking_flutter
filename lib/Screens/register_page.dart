@@ -206,7 +206,7 @@ class _RegisterPageState extends State<RegisterPage> {
               DropdownButtonFormField<String>(
                 value: _selectedAge,
                 hint: const Text('Select Age'),
-                items: ['18', '19', '20', '21', '22', '23', '24', '25']
+                items: ['14','15','16','17','18', '19', '20', '21', '22', '23', '24', '25']
                     .map((age) => DropdownMenuItem(
                           value: age,
                           child: Text(age),
