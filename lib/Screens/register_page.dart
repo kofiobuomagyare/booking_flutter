@@ -26,6 +26,8 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _selectedGender;
   XFile? _profilePicture;
   bool _isLoading = false;
+  bool _obscurePassword = true;
+
 
   @override
   void dispose() {
@@ -252,19 +254,32 @@ String _mapServerMessageToFriendlyMessage(String? message) {
               ),
               SizedBox(height: 16.h),
               TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  if (value.length < 6) {
-                    return 'Password must be at least 6 characters';
-                  }
-                  return null;
-                },
-              ),
+  controller: _passwordController,
+  decoration: InputDecoration(
+    labelText: 'Password',
+    suffixIcon: IconButton(
+      icon: Icon(
+        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+      ),
+      onPressed: () {
+        setState(() {
+          _obscurePassword = !_obscurePassword;
+        });
+      },
+    ),
+  ),
+  obscureText: _obscurePassword,
+  validator: (value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
+  },
+),
+
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _phoneController,
