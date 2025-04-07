@@ -9,13 +9,13 @@ import 'register_page.dart';
 
 String getBaseUrl() {
   if (Platform.isAndroid) {
-  return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for Android
-} else if (Platform.isIOS) {
-  return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for iOS
-} else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-  return 'http://localhost:8080'; // Use localhost for local testing on PC
-}
-return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Default for other cases
+    return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for Android
+  } else if (Platform.isIOS) {
+    return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for iOS
+  } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    return 'http://localhost:8080'; // Use localhost for local testing on PC
+  }
+  return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Default for other cases
 }
 
 class LoginPage extends StatefulWidget {
@@ -30,6 +30,7 @@ class _LoginPageState extends State<LoginPage> {
   final _phoneNumberController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _obscurePassword = true; // Track password visibility
 
   Future<void> loginUser() async {
     if (!_formKey.currentState!.validate()) return;
@@ -58,14 +59,24 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('role', role);
 
         if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          CupertinoPageRoute(
-            builder: (context) => role == 'Service Seeker'
-                ? NsaanoHomePage(token: token)
-                : ServiceProviderHome(token: token),
-          ),
-        );
+       Navigator.pushReplacement(
+  context,
+  CupertinoPageRoute(
+    builder: (context) {
+      if (role == 'Service Seeker') {
+        return NsaanoHomePage(token: token);  // Navigate to Service Seeker's Home
+      } else if (role == 'Service Provider') {
+        return ServiceProviderHome(token: token);  // Navigate to Service Provider's Home
+      } else if (role == 'User') {
+        return NsaanoHomePage(token: token);  // Navigate to NsaanoHomePage for User
+      } else {
+        // Handle any unexpected roles, maybe show an error page or default to NsaanoHomePage
+        return NsaanoHomePage(token: token);  // For example, navigate to your default NsaanoHomePage or show an error.
+      }
+    },
+  ),
+);
+
       } else {
         throw Exception(responseData['message'] ?? 'Login failed');
       }
@@ -111,7 +122,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
             // Translucent overlay
             Container(color: CupertinoColors.black.withValues(alpha: 0.3)),
-
 
             SafeArea(
               child: Center(
@@ -191,7 +201,7 @@ class _LoginPageState extends State<LoginPage> {
         child: CupertinoTextField(
           controller: controller,
           placeholder: placeholder,
-          obscureText: isPassword,
+          obscureText: isPassword ? _obscurePassword : false, // Control password visibility
           keyboardType: keyboardType,
           padding: const EdgeInsets.all(12),
           autofocus: true, // Ensure keyboard pops up when focused
@@ -199,6 +209,22 @@ class _LoginPageState extends State<LoginPage> {
             color: CupertinoColors.darkBackgroundGray,
             fontWeight: FontWeight.w500,
           ),
+          suffix: isPassword
+              ? GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword; // Toggle password visibility
+                    });
+                  },
+                  child: Icon(
+                    _obscurePassword
+                        ? CupertinoIcons.eye_slash
+                        : CupertinoIcons.eye,
+                    size: 20,
+                    color: CupertinoColors.activeBlue,
+                  ),
+                )
+              : null,
         ),
       ),
     );
