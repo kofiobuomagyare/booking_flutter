@@ -7,6 +7,7 @@ buildscript {
     dependencies {
         classpath "com.android.tools.build:gradle:8.2.1" // Use latest AGP
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        
     }
 }
 
