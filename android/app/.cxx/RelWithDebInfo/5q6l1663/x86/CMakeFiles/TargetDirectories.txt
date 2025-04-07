@@ -1,0 +1,2 @@
+C:/Users/nexTGen GH/Documents/App_develop/android/app/.cxx/RelWithDebInfo/5q6l1663/x86/CMakeFiles/edit_cache.dir
+C:/Users/nexTGen GH/Documents/App_develop/android/app/.cxx/RelWithDebInfo/5q6l1663/x86/CMakeFiles/rebuild_cache.dir
