@@ -118,50 +118,84 @@ Future<bool> _isAndroid13OrAbove() async {
   return androidInfo.version.sdkInt >= 33;
 }
 
-  Future<void> register() async {
-    if (!_formKey.currentState!.validate()) return;
+ Future<void> register() async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
 
-    try {
-      final url = getRegisterUrl();
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-       body: json.encode({
-  'first_name': _nameController.text.split(" ")[0],
-  'last_name': _nameController.text.split(" ")[1],
-  'email': _emailController.text,
-  'password': _passwordController.text,
-  'phone_number': _phoneController.text,
-  'age': int.tryParse(_selectedAge ?? '0'),
-  'gender': _selectedGender,
-  'profile_picture': _profilePicture?.path ?? '',
-  'role': 'User',
-  'address': _addressController.text,
-  'bio': _bioController.text,
-}),
+  try {
+    final url = getRegisterUrl();
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'first_name': _nameController.text.split(" ")[0],
+        'last_name': _nameController.text.split(" ")[1],
+        'email': _emailController.text,
+        'password': _passwordController.text,
+        'phone_number': _phoneController.text,
+        'age': int.tryParse(_selectedAge ?? '0'),
+        'gender': _selectedGender,
+        'profile_picture': _profilePicture?.path ?? '',
+        'role': 'User',
+        'address': _addressController.text,
+        'bio': _bioController.text,
+      }),
+    );
 
-      );
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
 
-      if (response.statusCode == 200) {
-        Navigator.pushReplacementNamed(context, '/home');
+      if (responseData['message'] == 'User registered successfully') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful! Please log in.')),
+        );
+        Navigator.pushReplacementNamed(context, '/login');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Registration failed: ${response.body}')),
+          SnackBar(
+            content: Text(
+              _mapServerMessageToFriendlyMessage(responseData['message']),
+            ),
+          ),
         );
       }
-    } catch (e) {
-      if (!mounted) return;
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        const SnackBar(
+          content: Text('Oops! Something went wrong. Please try again later.'),
+        ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    }
+  } catch (e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Unable to connect. Check your internet and try again.'),
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
+String _mapServerMessageToFriendlyMessage(String? message) {
+  switch (message) {
+    case 'Email already in use':
+      return 'That email is already registered. Try logging in instead.';
+    case 'Phone number already in use':
+      return 'That phone number is already linked to another account.';
+    case 'Missing required fields':
+      return 'Please fill out all the required fields.';
+    case 'Invalid email format':
+      return 'Please enter a valid email address.';
+    case 'User registered successfully':
+      return 'You have successfully registered!';
+    default:
+      return message ?? 'Something unexpected happened. Please try again.';
+  }
+}
 
   String getBaseUrl() {
     if (Platform.isAndroid) {
