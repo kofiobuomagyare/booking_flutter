@@ -1,15 +1,10 @@
+import 'package:app_develop/Screens/home.dart';
 import 'package:app_develop/Screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-import 'providers/auth_provider.dart';
-import 'providers/service_provider_auth_provider.dart';
-import 'providers/service_provider_provider.dart';
 import 'Screens/login.dart';
-import 'Screens/home_screen.dart';
 import 'Screens/map_screen.dart';
-import 'Screens/service_provider_login_screen.dart';
-import 'Screens/service_provider_dashboard.dart';
 
 
 void main() {
@@ -28,9 +23,8 @@ class NsaanoApp extends StatelessWidget {
       builder: (context, child) {
         return MultiProvider(
           providers: [
-            ChangeNotifierProvider(create: (_) => AuthProvider()),
-            ChangeNotifierProvider(create: (_) => ServiceProviderAuthProvider()),
-            ChangeNotifierProvider(create: (_) => ServiceProviderProvider()),
+            //ChangeNotifierProvider(create: (_) => AuthProvider()),
+            // Remove ServiceProviderAuthProvider and ServiceProviderProvider for now
           ],
           child: MaterialApp(
             debugShowCheckedModeBanner: false,
@@ -43,10 +37,8 @@ class NsaanoApp extends StatelessWidget {
             routes: {
               '/splash': (context) => const SplashScreen(),
               '/login': (context) => const LoginPage(),
-              '/home': (context) => const HomeScreen(),
-              '/map': (context) => MapScreen(token: context.read<AuthProvider>().token ?? ''),
-              '/service-provider-login': (context) => const ServiceProviderLoginScreen(),
-              '/service-provider-dashboard': (context) => const ServiceProviderDashboard(),
+              '/home': (context) => const NsaanoHomePage(token: '',),
+              '/map': (context) => MapScreen(token: '',), // Keep map screen route
             },
           ),
         );

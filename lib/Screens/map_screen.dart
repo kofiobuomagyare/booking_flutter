@@ -2,9 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import '../models/service_provider.dart';
-import '../services/api_service.dart';
-import '../screens/provider_details_screen.dart';
 
 class MapScreen extends StatefulWidget {
   final String token;
@@ -20,16 +17,12 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final Completer<GoogleMapController> _controller = Completer();
-  final Set<Marker> _markers = {};
-  late ApiService _apiService;
-  LatLng? _currentLocation;
+  late LatLng? _currentLocation;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _apiService = ApiService();
-    _apiService.setAuthToken(widget.token);
     _getCurrentLocation();
   }
 
@@ -57,9 +50,6 @@ class _MapScreenState extends State<MapScreen> {
         _currentLocation = LatLng(position.latitude, position.longitude);
         _isLoading = false;
       });
-
-      // Load nearby providers
-      _loadNearbyProviders();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -67,82 +57,6 @@ class _MapScreenState extends State<MapScreen> {
       );
       setState(() => _isLoading = false);
     }
-  }
-
-  Future<void> _loadNearbyProviders() async {
-    if (_currentLocation == null) return;
-
-    try {
-      final providers = await _apiService.getNearbyProviders(
-        _currentLocation!.latitude,
-        _currentLocation!.longitude,
-        5000, // 5km radius
-      );
-
-      if (!mounted) return;
-
-      setState(() {
-        _markers.clear();
-        for (var provider in providers) {
-          _addProviderMarker(provider);
-        }
-      });
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading providers: $e')),
-      );
-    }
-  }
-
-  void _addProviderMarker(ServiceProvider provider) {
-    if (provider.location != null) {
-      final lat = provider.location!['latitude'] as double;
-      final lng = provider.location!['longitude'] as double;
-      
-      _markers.add(
-        Marker(
-          markerId: MarkerId(provider.id),
-          position: LatLng(lat, lng),
-          infoWindow: InfoWindow(
-            title: provider.name,
-            snippet: provider.serviceType,
-          ),
-          onTap: () => _onMarkerTapped(provider),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-            _getCategoryHue(provider.serviceType),
-          ),
-        ),
-      );
-    }
-  }
-
-  double _getCategoryHue(String serviceType) {
-    // Assign different colors for different service types
-    switch (serviceType.toLowerCase()) {
-      case 'plumber':
-        return BitmapDescriptor.hueBlue;
-      case 'electrician':
-        return BitmapDescriptor.hueYellow;
-      case 'carpenter':
-        return BitmapDescriptor.hueOrange;
-      case 'tailor':
-        return BitmapDescriptor.hueMagenta;
-      default:
-        return BitmapDescriptor.hueRed;
-    }
-  }
-
-  void _onMarkerTapped(ServiceProvider provider) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProviderDetailsScreen(
-          providerId: provider.id,
-          token: widget.token,
-        ),
-      ),
-    );
   }
 
   @override
@@ -169,14 +83,13 @@ class _MapScreenState extends State<MapScreen> {
         onMapCreated: (GoogleMapController controller) {
           _controller.complete(controller);
         },
-        markers: _markers,
         myLocationEnabled: true,
         myLocationButtonEnabled: true,
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _loadNearbyProviders,
+        onPressed: _getCurrentLocation, // Reload location
         child: const Icon(Icons.refresh),
       ),
     );
   }
-} 
+}
