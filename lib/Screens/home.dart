@@ -5,14 +5,14 @@ import 'package:hugeicons/hugeicons.dart';
 
 import 'explore_page.dart';
 import 'profile_page.dart';
-import 'screens/apartment_page.dart';
+import 'screens/mason_page.dart';
 import 'screens/barbers_page.dart';
 import 'screens/carpenters_page.dart';
 import 'screens/electricians_page.dart';
-import 'screens/event_planners_page.dart';
+import 'screens/chef_page.dart';
 import 'screens/hairdressers_page.dart';
 import 'screens/mechanics_page.dart';
-import 'screens/nail_technicians_page.dart';
+import 'screens/makeup_artist_page.dart';
 import 'screens/painters_page.dart';
 import 'screens/plumbers_page.dart';
 import 'screens/see_all_page.dart';
@@ -209,30 +209,30 @@ class HomeContent extends StatelessWidget {
                   ),
                 ),
                 _buildCategoryIcon(
-                  'Event planners',
-                  HugeIcons.strokeRoundedCalendar03,
+                  'Chefs',
+                  HugeIcons.strokeRoundedChefHat,
                   const Color(0xff6161b8),
                   () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const EventPlannersPage()),
+                    MaterialPageRoute(builder: (context) => const ChefPage()),
                   ),
                 ),
                 _buildCategoryIcon(
-                  'Nail Technicians',
+                  'Makeup Artists',
                   HugeIcons.strokeRoundedAiBeautify,
                   const Color(0xff6161b8),
                   () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const NailTechniciansPage()),
+                    MaterialPageRoute(builder: (context) => const MakeupArtistPage()),
                   ),
                 ),
                 _buildCategoryIcon(
-                  'Apartment',
-                  HugeIcons.strokeRoundedBuilding05,
+                  'Masons',
+                  HugeIcons.strokeRoundedBuilding01,
                   const Color(0xff6161b8),
                   () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ApartmentPage()),
+                    MaterialPageRoute(builder: (context) => const MasonPage()),
                   ),
                 ),
                 _buildCategoryIcon(
