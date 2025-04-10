@@ -75,7 +75,7 @@ class _MakeupArtistPageState extends State<MakeupArtistPage> {
                             Text('Email: ${artist['email']}'),
                             Text('Phone: ${artist['phoneNumber']}'),
                             Text('Location: ${artist['location']}'),
-                            Text('Price per Hour: ${artist['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${artist['pricePerHour']}'),
                             Text('Description: ${artist['description']}'),
                           ],
                         ),

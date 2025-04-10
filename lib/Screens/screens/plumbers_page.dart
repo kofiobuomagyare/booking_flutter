@@ -77,7 +77,7 @@ class _PlumbersPageState extends State<PlumbersPage> {
                             Text('Email: ${plumber['email']}'),
                             Text('Phone: ${plumber['phoneNumber']}'),
                             Text('Location: ${plumber['location']}'),
-                            Text('Price per Hour: ${plumber['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${plumber['pricePerHour']}'),
                             Text('Description: ${plumber['description']}'),
                           ],
                         ),

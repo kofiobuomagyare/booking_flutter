@@ -77,7 +77,7 @@ class _MasonPageState extends State<MasonPage> {
                             Text('Email: ${mason['email']}'),
                             Text('Phone: ${mason['phoneNumber']}'),
                             Text('Location: ${mason['location']}'),
-                            Text('Price per Hour: ${mason['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${mason['pricePerHour']}'),
                             Text('Description: ${mason['description']}'),
                           ],
                         ),

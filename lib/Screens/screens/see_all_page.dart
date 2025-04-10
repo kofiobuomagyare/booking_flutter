@@ -78,7 +78,7 @@ class _SeeAllPageState extends State<SeeAllPage> {
                             Text('Email: ${provider['email']}'),
                             Text('Phone: ${provider['phoneNumber']}'),
                             Text('Location: ${provider['location']}'),
-                            Text('Rate: ${provider['pricePerHour']}'),
+                           Text('Price Per Hour: GHS ${provider['pricePerHour']}'),
                             Text('Description: ${provider['description']}'),
                           ],
                         ),

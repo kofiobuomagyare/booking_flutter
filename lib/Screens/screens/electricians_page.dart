@@ -76,7 +76,7 @@ class _ElectriciansPageState extends State<ElectriciansPage> {
                             Text('Email: ${electrician['email']}'),
                             Text('Phone: ${electrician['phoneNumber']}'),
                             Text('Location: ${electrician['location']}'),
-                            Text('Price per Hour: ${electrician['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${electrician['pricePerHour']}'),
                             Text('Description: ${electrician['description']}'),
                           ],
                         ),

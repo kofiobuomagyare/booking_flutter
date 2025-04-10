@@ -77,7 +77,7 @@ class _PaintersPageState extends State<PaintersPage> {
                             Text('Email: ${painter['email']}'),
                             Text('Phone: ${painter['phoneNumber']}'),
                             Text('Location: ${painter['location']}'),
-                            Text('Price per Hour: ${painter['pricePerHour']}'),
+                            Text('Price per Hour: GHS ${painter['pricePerHour']}'),
                             Text('Description: ${painter['description']}'),
                           ],
                         ),

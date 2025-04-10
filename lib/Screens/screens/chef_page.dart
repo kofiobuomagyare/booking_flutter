@@ -76,7 +76,7 @@ class _ChefPageState extends State<ChefPage> {
                             Text('Email: ${chef['email']}'),
                             Text('Phone: ${chef['phoneNumber']}'),
                             Text('Location: ${chef['location']}'),
-                            Text('Price per Hour: ${chef['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${chef['pricePerHour']}'),
                             Text('Description: ${chef['description']}'),
                           ],
                         ),

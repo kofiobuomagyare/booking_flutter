@@ -76,7 +76,7 @@ class _CarpentersPageState extends State<CarpentersPage> {
                             Text('Email: ${carpenter['email']}'),
                             Text('Phone: ${carpenter['phoneNumber']}'),
                             Text('Location: ${carpenter['location']}'),
-                            Text('Price per Hour: ${carpenter['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${carpenter['pricePerHour']}'),
                             Text('Description: ${carpenter['description']}'),
                           ],
                         ),

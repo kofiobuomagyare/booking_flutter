@@ -75,7 +75,7 @@ class _HairdressersPageState extends State<HairdressersPage> {
                             Text('Email: ${hairdresser['email']}'),
                             Text('Phone: ${hairdresser['phoneNumber']}'),
                             Text('Location: ${hairdresser['location']}'),
-                            Text('Price per Hour: ${hairdresser['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${hairdresser['pricePerHour']}'),
                             Text('Description: ${hairdresser['description']}'),
                           ],
                         ),

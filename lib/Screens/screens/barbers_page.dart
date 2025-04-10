@@ -76,7 +76,7 @@ class _BarbersPageState extends State<BarbersPage> {
                             Text('Email: ${barber['email']}'),
                             Text('Phone: ${barber['phoneNumber']}'),
                             Text('Location: ${barber['location']}'),
-                            Text('Price per Hour: ${barber['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${barber['pricePerHour']}'),
                             Text('Description: ${barber['description']}'),
                           ],
                         ),

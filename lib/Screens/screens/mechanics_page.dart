@@ -77,7 +77,7 @@ class _MechanicsPageState extends State<MechanicsPage> {
                             Text('Email: ${mechanic['email']}'),
                             Text('Phone: ${mechanic['phoneNumber']}'),
                             Text('Location: ${mechanic['location']}'),
-                            Text('Price per Hour: ${mechanic['pricePerHour']}'),
+                            Text('Price per Hour: GHS  ${mechanic['pricePerHour']}'),
                             Text('Description: ${mechanic['description']}'),
                           ],
                         ),
