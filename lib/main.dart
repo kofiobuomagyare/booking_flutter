@@ -1,9 +1,9 @@
+import 'package:app_develop/Screens/booking.dart';
 import 'package:app_develop/Screens/home.dart';
 import 'package:app_develop/Screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'Screens/login.dart';
-import 'Screens/map_screen.dart';
 
 
 void main() {
@@ -34,7 +34,7 @@ class NsaanoApp extends StatelessWidget {
               '/splash': (context) => const SplashScreen(),
               '/login': (context) => const LoginPage(),
               '/home': (context) => const NsaanoHomePage(token: '',),
-              '/map': (context) => MapScreen(token: '',), // Keep map screen route
+              '/booking': (context) => BookingScreen(token: '',), // Keep map screen route
             },
           ),
         );

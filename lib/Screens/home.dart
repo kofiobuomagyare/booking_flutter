@@ -1,9 +1,9 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:app_develop/Screens/booking.dart';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 
-import 'explore_page.dart';
 import 'profile_page.dart';
 import 'screens/mason_page.dart';
 import 'screens/barbers_page.dart';
@@ -39,7 +39,7 @@ void initState() {
   super.initState();
   _screens = [
     const HomeContent(),
-    ExploreScreen(token: widget.token),
+    BookingScreen(token: widget.token),
     const SearchScreen(),
     ProfilePage(token: widget.token), // Pass the actual token
   ];
@@ -71,8 +71,8 @@ void initState() {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.explore),
-            label: 'Explore',
+            icon: Icon(Icons.calendar_month),
+            label: 'Bookings',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.search),
