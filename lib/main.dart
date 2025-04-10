@@ -2,7 +2,6 @@ import 'package:app_develop/Screens/home.dart';
 import 'package:app_develop/Screens/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 import 'Screens/login.dart';
 import 'Screens/map_screen.dart';
 
@@ -21,12 +20,9 @@ class NsaanoApp extends StatelessWidget {
       minTextAdapt: true,
       splitScreenMode: true,
       builder: (context, child) {
-        return MultiProvider(
-          providers: [
-            //ChangeNotifierProvider(create: (_) => AuthProvider()),
-            // Remove ServiceProviderAuthProvider and ServiceProviderProvider for now
-          ],
-          child: MaterialApp(
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Nsaano',
             theme: ThemeData(

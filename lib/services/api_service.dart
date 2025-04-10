@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:8080/api'; // Update with your actual backend URL
+  static const String baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api'; // Update with your actual backend URL
   String? _authToken;
 
   // Set auth token
