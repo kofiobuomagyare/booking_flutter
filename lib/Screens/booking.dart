@@ -1,5 +1,3 @@
-// ignore_for_file: use_super_parameters, library_private_types_in_public_api
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -7,7 +5,6 @@ import 'package:http/http.dart' as http;
 class BookingScreen extends StatefulWidget {
   final String token;
 
-  // Constructor that accepts the token
   const BookingScreen({Key? key, required this.token}) : super(key: key);
 
   @override
@@ -20,10 +17,20 @@ class _BookingScreenState extends State<BookingScreen> {
   String userId = '';
   DateTime selectedDate = DateTime.now();
   String phoneNumber = '';
+  String password = '';
+  List<dynamic> userAppointments = [];
+
+  @override
+  void initState() {
+    super.initState();
+    fetchServiceProviders();
+  }
 
   // Fetch all service providers
   Future<void> fetchServiceProviders() async {
-    final response = await http.get(Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all'));
+    final response = await http.get(Uri.parse(
+        'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all'));
+
     if (response.statusCode == 200 || response.statusCode == 201) {
       setState(() {
         serviceProviders = json.decode(response.body);
@@ -33,29 +40,34 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
-  // Fetch user ID using the phone number
-  // Fetch user ID using the phone number
-Future<void> fetchUserId() async {
-  final response = await http.get(
-    Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/users/findUserIdByPhone?phone=$phoneNumber'),
-  );
-  if (response.statusCode == 200) {
-    final Map<String, dynamic> data = json.decode(response.body); // Decode the JSON response
-    setState(() {
-      userId = data['user_id']; // Extract the 'user_id' from the response
-    });
-  } else {
-    setState(() {
-      userId = '';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('User not found')));
-  }
-}
+  // Fetch user ID using phone and password
+  Future<void> fetchUserId() async {
+    final response = await http.get(Uri.parse(
+        'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/users/findUserIdByPhoneNumberAndPassword?phoneNumber=$phoneNumber&password=$password'));
 
-  // Create an appointment
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = json.decode(response.body);
+      setState(() {
+        userId = data['user_id'];
+      });
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('User ID fetched successfully')));
+      fetchUserAppointments();
+    } else {
+      setState(() {
+        userId = '';
+        userAppointments = [];
+      });
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('User not found')));
+    }
+  }
+
+  // Book an appointment
   Future<void> createAppointment() async {
     if (userId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Please enter a valid phone number')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please enter valid credentials')));
       return;
     }
 
@@ -67,37 +79,56 @@ Future<void> fetchUserId() async {
     };
 
     final response = await http.post(
-      Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/appointments/create'),
+      Uri.parse(
+          'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/appointments/create'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode(appointment),
     );
 
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Appointment created successfully!')));
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Appointment created successfully')));
+      fetchUserAppointments(); // Refresh list
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to create appointment')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to create appointment')));
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    fetchServiceProviders();
+  // Fetch all appointments by this user
+  Future<void> fetchUserAppointments() async {
+    final response = await http.get(
+      Uri.parse(
+          'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/appointments/all'),
+    );
+
+    if (response.statusCode == 200) {
+      List<dynamic> allAppointments = json.decode(response.body);
+      List<dynamic> filtered = allAppointments
+          .where((appt) => appt['user_id'].toString() == userId)
+          .toList();
+
+      setState(() {
+        userAppointments = filtered;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Booking')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Select Service Provider:'),
             DropdownButton<String>(
               isExpanded: true,
-              value: selectedServiceProviderId.isNotEmpty ? selectedServiceProviderId : null,
+              value:
+                  selectedServiceProviderId.isNotEmpty ? selectedServiceProviderId : null,
+              hint: Text("Choose a provider"),
               onChanged: (newValue) {
                 setState(() {
                   selectedServiceProviderId = newValue!;
@@ -114,14 +145,17 @@ Future<void> fetchUserId() async {
             Text('Enter Your Phone Number:'),
             TextField(
               keyboardType: TextInputType.phone,
-              onChanged: (value) {
-                setState(() {
-                  phoneNumber = value;
-                });
-              },
-              decoration: InputDecoration(hintText: 'Enter phone number'),
+              onChanged: (value) => phoneNumber = value,
+              decoration: InputDecoration(hintText: 'Phone number'),
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 10),
+            Text('Enter Your Password:'),
+            TextField(
+              obscureText: true,
+              onChanged: (value) => password = value,
+              decoration: InputDecoration(hintText: 'Password'),
+            ),
+            SizedBox(height: 10),
             ElevatedButton(
               onPressed: fetchUserId,
               child: Text('Fetch User ID'),
@@ -132,16 +166,17 @@ Future<void> fetchUserId() async {
               title: Text("${selectedDate.toLocal()}".split(' ')[0]),
               trailing: Icon(Icons.calendar_today),
               onTap: () async {
-                final DateTime? picked = await showDatePicker(
+                final picked = await showDatePicker(
                   context: context,
                   initialDate: selectedDate,
-                  firstDate: DateTime(2000),
+                  firstDate: DateTime.now(),
                   lastDate: DateTime(2101),
                 );
-                if (picked != null && picked != selectedDate)
+                if (picked != null && picked != selectedDate) {
                   setState(() {
                     selectedDate = picked;
                   });
+                }
               },
             ),
             SizedBox(height: 20),
@@ -149,6 +184,28 @@ Future<void> fetchUserId() async {
               onPressed: createAppointment,
               child: Text('Book Appointment'),
             ),
+            SizedBox(height: 30),
+            Divider(),
+            Text(
+              'Previous Appointments',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            userAppointments.isEmpty
+                ? Text('No appointments found.')
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: userAppointments.length,
+                    itemBuilder: (context, index) {
+                      final appt = userAppointments[index];
+                      return ListTile(
+                        leading: Icon(Icons.event_note),
+                        title: Text('Provider ID: ${appt['service_provider_id']}'),
+                        subtitle: Text(
+                            'Date: ${appt['appointmentDate']}\nStatus: ${appt['status']}'),
+                      );
+                    },
+                  ),
           ],
         ),
       ),

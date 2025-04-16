@@ -40,6 +40,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
   }
 
+  @override
+  void dispose() {
+    _animationController.dispose();  // 🚨 This fixes the error
+    _navigationTimer?.cancel();      // Clean up timer too
+    super.dispose();
+  }
   
   @override
   Widget build(BuildContext context) {

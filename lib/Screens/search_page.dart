@@ -59,8 +59,8 @@ class _SearchScreenState extends State<SearchScreen> {
   Future<void> fetchServiceProviders([String? category]) async {
     setState(() => _isLoading = true);
     final Uri url = category == null || category == 'All'
-        ? Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/service_providers/all') // adjust accordingly
-        : Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/service_providers/service_type?serviceTypes=$category');
+        ? Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all') // adjust accordingly
+        : Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/service_type?serviceTypes=$category');
 
     try {
       final response = await http.get(url);
