@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class BookingScreen extends StatefulWidget {
   final String token;
 
-  const BookingScreen({Key? key, required this.token}) : super(key: key);
+  const BookingScreen({super.key, required this.token});
 
   @override
   _BookingScreenState createState() => _BookingScreenState();
