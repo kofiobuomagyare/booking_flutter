@@ -231,18 +231,30 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                           title: Text(provider.name),
                           subtitle: Text(provider.serviceType),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('₵${provider.pricePerHour}/hr', style: const TextStyle(fontSize: 12)),
-                              const SizedBox(height: 4),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
-                                onPressed: () => _showProviderDetails(provider),
-                                child: const Text('View', style: TextStyle(fontSize: 12)),
-                              ),
-                            ],
-                          ),
+                         trailing: SizedBox(
+  width: 100,
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    mainAxisAlignment: MainAxisAlignment.center,
+    crossAxisAlignment: CrossAxisAlignment.end,
+    children: [
+      Text('₵${provider.pricePerHour}/hr', style: const TextStyle(fontSize: 12)),
+      const SizedBox(height: 4),
+      SizedBox(
+        height: 30,
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            textStyle: const TextStyle(fontSize: 12),
+          ),
+          onPressed: () => _showProviderDetails(provider),
+          child: const Text('View'),
+        ),
+      ),
+    ],
+  ),
+),
+
                         ),
                       );
                     },
