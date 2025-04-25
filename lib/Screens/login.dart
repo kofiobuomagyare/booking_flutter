@@ -1,22 +1,9 @@
-import 'dart:convert';
-import 'dart:io';
-import 'package:app_develop/Screens/service_provider_home.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import 'home.dart';
-import 'register_page.dart';
-
-String getBaseUrl() {
-  if (Platform.isAndroid) {
-    return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for Android
-  } else if (Platform.isIOS) {
-    return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Use Heroku URL for iOS
-  } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    return 'http://localhost:8080'; // Use localhost for local testing on PC
-  }
-  return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com'; // Default for other cases
-}
+import 'package:provider/provider.dart';
+import 'package:app_develop/Screens/service_provider_home.dart';
+import 'package:app_develop/Screens/home.dart';
+import 'package:app_develop/Screens/register_page.dart';
+import 'package:app_develop/services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -29,64 +16,46 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _phoneNumberController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
-  bool _obscurePassword = true; // Track password visibility
+  bool _obscurePassword = true;
 
-  Future<void> loginUser() async {
+  @override
+  void initState() {
+    super.initState();
+    // Check if user is already logged in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkLoginStatus();
+    });
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    await authService.loadLoginState();
+    if (authService.isLoggedIn) {
+      _navigateBasedOnRole(authService.token!, authService.role!);
+    }
+  }
+
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final success = await authService.login(
+      _phoneNumberController.text,
+      _passwordController.text,
+    );
 
-    try {
-      final response = await http.post(
-        Uri.parse('${getBaseUrl()}/api/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'phone_number': _phoneNumberController.text,
-          'password': _passwordController.text,
-        }),
-      );
+    if (!mounted) return;
 
-      if (!mounted) return;
-
-      final responseData = json.decode(response.body);
-      if (response.statusCode == 200) {
-        String token = responseData['token'];
-        String role = responseData['role'];
-
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', token);
-        await prefs.setString('role', role);
-
-        if (!mounted) return;
-       Navigator.pushReplacement(
-  context,
-  CupertinoPageRoute(
-    builder: (context) {
-      if (role == 'Service Seeker') {
-        return NsaanoHomePage(token: token);  // Navigate to Service Seeker's Home
-      } else if (role == 'Service Provider') {
-        return ServiceProviderHome(token: token);  // Navigate to Service Provider's Home
-      } else if (role == 'User') {
-        return NsaanoHomePage(token: token);  // Navigate to NsaanoHomePage for User
-      } else {
-        // Handle any unexpected roles, maybe show an error page or default to NsaanoHomePage
-        return NsaanoHomePage(token: token);  // For example, navigate to your default NsaanoHomePage or show an error.
-      }
-    },
-  ),
-);
-
-      } else {
-        throw Exception(responseData['message'] ?? 'Login failed');
-      }
-    } catch (e) {
-      if (!mounted) return;
+    if (success) {
+      _navigateBasedOnRole(authService.token!, authService.role!);
+      // 👇 Log it from here
+  debugPrint('📱 Logged in user: ${authService.phoneNumber}');
+    } else {
       showCupertinoDialog(
         context: context,
         builder: (context) => CupertinoAlertDialog(
           title: const Text('Error'),
-          content: Text(e.toString()),
+          content: Text(authService.errorMessage),
           actions: [
             CupertinoDialogAction(
               child: const Text('OK'),
@@ -95,9 +64,24 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _navigateBasedOnRole(String token, String role) {
+    Navigator.pushReplacement(
+      context,
+      CupertinoPageRoute(
+        builder: (context) {
+          if (role == 'Service Seeker') {
+            return NsaanoHomePage(token: token);
+          } else if (role == 'Service Provider') {
+            return ServiceProviderHome(token: token);
+          } else {
+            return NsaanoHomePage(token: token);
+          }
+        },
+      ),
+    );
   }
 
   @override
@@ -108,10 +92,9 @@ class _LoginPageState extends State<LoginPage> {
         backgroundColor: CupertinoColors.systemBackground,
       ),
       child: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(), // Dismiss keyboard when tapping outside
+        onTap: () => FocusScope.of(context).unfocus(),
         child: Stack(
           children: [
-            // Background image
             Container(
               decoration: const BoxDecoration(
                 image: DecorationImage(
@@ -120,9 +103,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
             ),
-            // Translucent overlay
-            Container(color: CupertinoColors.black.withValues(alpha: 0.3)),
-
+            Container(color: CupertinoColors.black.withOpacity(0.3)),
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
@@ -147,11 +128,15 @@ class _LoginPageState extends State<LoginPage> {
                                 isPassword: true,
                               ),
                               const SizedBox(height: 24),
-                              CupertinoButton.filled(
-                                onPressed: _isLoading ? null : loginUser,
-                                child: _isLoading
-                                    ? const CupertinoActivityIndicator()
-                                    : const Text('Login'),
+                              Consumer<AuthService>(
+                                builder: (context, authService, child) {
+                                  return CupertinoButton.filled(
+                                    onPressed: authService.isLoading ? null : _login,
+                                    child: authService.isLoading
+                                        ? const CupertinoActivityIndicator()
+                                        : const Text('Login'),
+                                  );
+                                },
                               ),
                               const SizedBox(height: 16),
                               CupertinoButton(
@@ -195,16 +180,15 @@ class _LoginPageState extends State<LoginPage> {
       padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: CupertinoColors.white.withValues(alpha: 153), // Translucent input
+          color: CupertinoColors.white.withOpacity(0.6),
           borderRadius: BorderRadius.circular(8),
         ),
         child: CupertinoTextField(
           controller: controller,
           placeholder: placeholder,
-          obscureText: isPassword ? _obscurePassword : false, // Control password visibility
+          obscureText: isPassword ? _obscurePassword : false,
           keyboardType: keyboardType,
           padding: const EdgeInsets.all(12),
-          autofocus: true, // Ensure keyboard pops up when focused
           placeholderStyle: const TextStyle(
             color: CupertinoColors.darkBackgroundGray,
             fontWeight: FontWeight.w500,
@@ -213,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
               ? GestureDetector(
                   onTap: () {
                     setState(() {
-                      _obscurePassword = !_obscurePassword; // Toggle password visibility
+                      _obscurePassword = !_obscurePassword;
                     });
                   },
                   child: Icon(
@@ -236,11 +220,4 @@ class _LoginPageState extends State<LoginPage> {
     _passwordController.dispose();
     super.dispose();
   }
-}
-
-void main() {
-  runApp(const CupertinoApp(
-    home: LoginPage(),
-    debugShowCheckedModeBanner: false,
-  ));
 }

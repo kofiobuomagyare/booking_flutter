@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:app_develop/Screens/login.dart';
 import 'package:app_develop/Screens/register_page.dart';
+import 'package:app_develop/Screens/home.dart'; // Replace with your actual home screen path
+import 'package:app_develop/services/auth_service.dart';
 import 'dart:async';
 
 class SplashScreen extends StatefulWidget {
@@ -15,13 +17,12 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  // ignore: unused_field
-  Timer? _navigationTimer;  // Add this line to store the timer
+  Timer? _navigationTimer;
 
   @override
   void initState() {
     super.initState();
-    
+
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -30,23 +31,33 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
     _animationController.forward();
 
-    _navigationTimer = Timer(const Duration(seconds: 3), () {
-      if (mounted) {  // Add this check
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const AuthPage()),
-        );
-      }
-    });
-    
+    _navigationTimer = Timer(const Duration(seconds: 3), _checkLoginStatus);
+  }
+
+  Future<void> _checkLoginStatus() async {
+    final authService = AuthService();
+    await authService.loadLoginState();
+
+    if (!mounted) return;
+
+    if (authService.isLoggedIn) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const NsaanoHomePage(token: '',)), // Update with your home screen widget
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const AuthPage()),
+      );
+    }
   }
 
   @override
   void dispose() {
-    _animationController.dispose();  // 🚨 This fixes the error
-    _navigationTimer?.cancel();      // Clean up timer too
+    _animationController.dispose();
+    _navigationTimer?.cancel();
     super.dispose();
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,7 +86,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo Container with Frosted Glass Effect
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -100,8 +110,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       ),
                     ),
                     const SizedBox(height: 32),
-                    
-                    // App Name
                     const Text(
                       'Nsaano',
                       style: TextStyle(
@@ -111,10 +119,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         letterSpacing: -0.5,
                       ),
                     ),
-                    
                     const SizedBox(height: 12),
-                    
-                    // Tagline
                     Text(
                       'Your Handyman Solution',
                       style: TextStyle(
@@ -124,10 +129,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         letterSpacing: 0.2,
                       ),
                     ),
-                    
                     const SizedBox(height: 48),
-                    
-                    // iOS-style loading indicator
                     SizedBox(
                       width: 24,
                       height: 24,
@@ -203,8 +205,6 @@ class AuthPage extends StatelessWidget {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 48),
-                  
-                  // Login Button - iOS style
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
@@ -243,8 +243,6 @@ class AuthPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
-                  // Register Button - iOS style
                   Container(
                     margin: const EdgeInsets.only(bottom: 48),
                     decoration: BoxDecoration(
