@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BookingScreen extends StatefulWidget {
   final String token;
@@ -16,50 +18,103 @@ class _BookingScreenState extends State<BookingScreen> {
   String selectedServiceProviderId = '';
   String userId = '';
   DateTime selectedDate = DateTime.now();
-  String phoneNumber = '';
-  String password = '';
+  bool isLoading = true;
+  String errorMessage = '';
   List<dynamic> userAppointments = [];
-
+  
   @override
   void initState() {
     super.initState();
-    fetchServiceProviders();
+    _initialize();
+  }
+
+  // Initialize screen data
+  Future<void> _initialize() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = '';
+    });
+    
+    try {
+      // Get user ID from SharedPreferences
+      await _getUserId();
+      
+      // Fetch service providers
+      await fetchServiceProviders();
+      
+      // Fetch user appointments
+      if (userId.isNotEmpty) {
+        await fetchUserAppointments();
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error initializing data: $e';
+      });
+      debugPrint('Error in _initialize: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  // Get user ID from SharedPreferences
+  Future<void> _getUserId() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final phoneNumber = prefs.getString('phoneNumber');
+      
+      if (phoneNumber == null || phoneNumber.isEmpty) {
+        setState(() {
+          errorMessage = 'User phone number not found. Please log in again.';
+        });
+        return;
+      }
+      
+      debugPrint('Retrieved phone number: $phoneNumber');
+      
+      // Get user_id by phone number
+      final response = await http.get(
+        Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/users/findUserIdByPhone?phoneNumber=$phoneNumber'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          userId = data['user_id'];
+        });
+        debugPrint('Retrieved user ID: $userId');
+      } else {
+        setState(() {
+          errorMessage = 'Failed to find user. Please check your account.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error retrieving user ID: $e';
+      });
+      debugPrint('Error in _getUserId: $e');
+    }
   }
 
   // Fetch all service providers
   Future<void> fetchServiceProviders() async {
-    final response = await http.get(Uri.parse(
-        'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all'));
+    try {
+      final response = await http.get(Uri.parse(
+          'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all'));
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        setState(() {
+          serviceProviders = json.decode(response.body);
+        });
+      } else {
+        throw Exception('Failed to load service providers');
+      }
+    } catch (e) {
       setState(() {
-        serviceProviders = json.decode(response.body);
+        errorMessage = 'Error loading service providers: $e';
       });
-    } else {
-      throw Exception('Failed to load service providers');
-    }
-  }
-
-  // Fetch user ID using phone and password
-  Future<void> fetchUserId() async {
-    final response = await http.get(Uri.parse(
-        'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/users/findUserIdByPhoneNumberAndPassword?phoneNumber=$phoneNumber&password=$password'));
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final data = json.decode(response.body);
-      setState(() {
-        userId = data['user_id'];
-      });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('User ID fetched successfully')));
-      fetchUserAppointments();
-    } else {
-      setState(() {
-        userId = '';
-        userAppointments = [];
-      });
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('User not found')));
+      debugPrint('Error in fetchServiceProviders: $e');
     }
   }
 
@@ -67,145 +122,485 @@ class _BookingScreenState extends State<BookingScreen> {
   Future<void> createAppointment() async {
     if (userId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please enter valid credentials')));
+          const SnackBar(content: Text('User ID not found. Please log in again.')));
+      return;
+    }
+    
+    if (selectedServiceProviderId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a service provider')));
       return;
     }
 
-    final appointment = {
-      'user_id': userId,
-      'service_provider_id': selectedServiceProviderId,
-      'appointmentDate': selectedDate.toIso8601String(),
-      'status': 'Pending',
-    };
+    setState(() {
+      isLoading = true;
+    });
 
-    final response = await http.post(
-      Uri.parse(
-          'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/appointments/create'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(appointment),
-    );
+    try {
+      final appointment = {
+        'user_id': userId,
+        'service_provider_id': selectedServiceProviderId,
+        'appointmentDate': selectedDate.toIso8601String(),
+        'status': 'Pending',
+      };
 
-    if (response.statusCode == 201 || response.statusCode == 200) {
+      final response = await http.post(
+        Uri.parse(
+            'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/appointments/create'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(appointment),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Appointment created successfully')));
+        fetchUserAppointments(); // Refresh list
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to create appointment. Status: ${response.statusCode}')));
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Appointment created successfully')));
-      fetchUserAppointments(); // Refresh list
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create appointment')));
+          SnackBar(content: Text('Error creating appointment: $e')));
+      debugPrint('Error in createAppointment: $e');
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  // Fetch all appointments by this user
+  // Fetch all appointments by this user using the provided endpoint
   Future<void> fetchUserAppointments() async {
-    final response = await http.get(
-      Uri.parse(
-          'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/appointments/all'),
-    );
-
-    if (response.statusCode == 200) {
-      List<dynamic> allAppointments = json.decode(response.body);
-      List<dynamic> filtered = allAppointments
-          .where((appt) => appt['user_id'].toString() == userId)
-          .toList();
-
+    if (userId.isEmpty) {
       setState(() {
-        userAppointments = filtered;
+        userAppointments = [];
+      });
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/appointments/users/$userId/appointments'),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          userAppointments = json.decode(response.body);
+        });
+        debugPrint('Fetched ${userAppointments.length} appointments');
+      } else if (response.statusCode == 404) {
+        // Not found is okay - just means no appointments
+        setState(() {
+          userAppointments = [];
+        });
+      } else {
+        debugPrint('Error fetching appointments: ${response.statusCode}');
+        setState(() {
+          errorMessage = 'Error fetching your appointments';
+        });
+      }
+    } catch (e) {
+      debugPrint('Exception in fetchUserAppointments: $e');
+      setState(() {
+        errorMessage = 'Error fetching appointments: $e';
       });
     }
+  }
+
+  // Format date for display
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  // Helper to get color based on appointment status
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return const Color(0xFF10B981); // Green
+      case 'confirmed':
+        return const Color(0xFF5E5CE6); // Purple
+      case 'cancelled':
+        return const Color(0xFFEF4444); // Red
+      case 'pending':
+        return const Color(0xFFF59E0B); // Amber
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Capitalize first letter of status
+  String _capitalizeStatus(String status) {
+    if (status.isEmpty) return '';
+    return status[0].toUpperCase() + status.substring(1).toLowerCase();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Booking')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Select Service Provider:'),
-            DropdownButton<String>(
-              isExpanded: true,
-              value:
-                  selectedServiceProviderId.isNotEmpty ? selectedServiceProviderId : null,
-              hint: Text("Choose a provider"),
-              onChanged: (newValue) {
-                setState(() {
-                  selectedServiceProviderId = newValue!;
-                });
-              },
-              items: serviceProviders.map<DropdownMenuItem<String>>((provider) {
-                return DropdownMenuItem<String>(
-                  value: provider['service_provider_id'],
-                  child: Text(provider['businessName']),
-                );
-              }).toList(),
+      appBar: AppBar(
+        title: const Text('Booking'),
+        actions: [
+          if (!isLoading && userId.isNotEmpty)
+            IconButton(
+              icon: const Icon(CupertinoIcons.refresh),
+              onPressed: _initialize,
+              tooltip: 'Refresh',
             ),
-            SizedBox(height: 20),
-            Text('Enter Your Phone Number:'),
-            TextField(
-              keyboardType: TextInputType.phone,
-              onChanged: (value) => phoneNumber = value,
-              decoration: InputDecoration(hintText: 'Phone number'),
-            ),
-            SizedBox(height: 10),
-            Text('Enter Your Password:'),
-            TextField(
-              obscureText: true,
-              onChanged: (value) => password = value,
-              decoration: InputDecoration(hintText: 'Password'),
-            ),
-            SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: fetchUserId,
-              child: Text('Fetch User ID'),
-            ),
-            SizedBox(height: 20),
-            Text('Select Appointment Date:'),
-            ListTile(
-              title: Text("${selectedDate.toLocal()}".split(' ')[0]),
-              trailing: Icon(Icons.calendar_today),
-              onTap: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: selectedDate,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime(2101),
-                );
-                if (picked != null && picked != selectedDate) {
-                  setState(() {
-                    selectedDate = picked;
-                  });
-                }
-              },
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: createAppointment,
-              child: Text('Book Appointment'),
-            ),
-            SizedBox(height: 30),
-            Divider(),
-            Text(
-              'Previous Appointments',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            userAppointments.isEmpty
-                ? Text('No appointments found.')
-                : ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: userAppointments.length,
-                    itemBuilder: (context, index) {
-                      final appt = userAppointments[index];
-                      return ListTile(
-                        leading: Icon(Icons.event_note),
-                        title: Text('Provider ID: ${appt['service_provider_id']}'),
-                        subtitle: Text(
-                            'Date: ${appt['appointmentDate']}\nStatus: ${appt['status']}'),
-                      );
-                    },
+        ],
+      ),
+      body: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : userId.isEmpty
+              ? _buildErrorView()
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // User info section
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5E5CE6).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              CupertinoIcons.person_circle_fill,
+                              color: Color(0xFF5E5CE6),
+                              size: 32,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Logged in',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF5E5CE6),
+                                    ),
+                                  ),
+                                  Text(
+                                    'User ID: $userId',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // New booking section
+                      const Text(
+                        'New Booking',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Service provider selection
+                      Text(
+                        'Select Service Provider:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: selectedServiceProviderId.isNotEmpty
+                                ? selectedServiceProviderId
+                                : null,
+                            hint: const Text("Choose a provider"),
+                            onChanged: (newValue) {
+                              setState(() {
+                                selectedServiceProviderId = newValue!;
+                              });
+                            },
+                            items: serviceProviders
+                                .map<DropdownMenuItem<String>>((provider) {
+                              return DropdownMenuItem<String>(
+                                value: provider['service_provider_id'],
+                                child: Text(provider['businessName']),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      
+                      // Date selection
+                      Text(
+                        'Select Appointment Date:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: selectedDate,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2101),
+                          );
+                          if (picked != null) {
+                            // Show time picker after selecting date
+                            final pickedTime = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(selectedDate),
+                            );
+                            
+                            if (pickedTime != null) {
+                              setState(() {
+                                selectedDate = DateTime(
+                                  picked.year,
+                                  picked.month,
+                                  picked.day,
+                                  pickedTime.hour,
+                                  pickedTime.minute,
+                                );
+                              });
+                            }
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "${selectedDate.toLocal().day}/${selectedDate.toLocal().month}/${selectedDate.toLocal().year} at ${selectedDate.toLocal().hour}:${selectedDate.toLocal().minute.toString().padLeft(2, '0')}",
+                              ),
+                              const Icon(CupertinoIcons.calendar, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      // Book button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: createAppointment,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5E5CE6),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text(
+                            'Book Appointment',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      
+                      // Previous appointments section
+                      const Text(
+                        'Previous Appointments',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Appointments list
+                      userAppointments.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 32),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      CupertinoIcons.calendar_badge_minus,
+                                      size: 48,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No appointments found',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: userAppointments.length,
+                              itemBuilder: (context, index) {
+                                final appointment = userAppointments[index];
+                                final serviceType = appointment['serviceType'] ?? 'Unknown Service';
+                                final businessName = appointment['businessName'] ?? 'Unknown Provider';
+                                final date = appointment['appointmentDate'] ?? '';
+                                final status = appointment['status'] ?? 'unknown';
+                                
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  elevation: 2,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                serviceType,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: _getStatusColor(status),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                _capitalizeStatus(status),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          businessName,
+                                          style: TextStyle(
+                                            color: Colors.grey.shade700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              CupertinoIcons.calendar,
+                                              size: 14,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _formatDate(date),
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: Colors.grey.shade600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                      const SizedBox(height: 32),
+                    ],
                   ),
+                ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              CupertinoIcons.exclamationmark_circle,
+              size: 64,
+              color: Colors.red.shade300,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              errorMessage.isEmpty
+                  ? 'Unable to retrieve your account information'
+                  : errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: _initialize,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF5E5CE6),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 24,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Try Again'),
+            ),
           ],
         ),
       ),

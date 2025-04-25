@@ -2,7 +2,6 @@ import 'package:app_develop/Screens/booking.dart';
 import 'package:app_develop/Screens/home.dart';
 import 'package:app_develop/Screens/splash_screen.dart';
 import 'package:app_develop/services/auth_service.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';

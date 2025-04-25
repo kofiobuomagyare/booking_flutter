@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'booking.dart';
 
-// Service Provider Model
 class ServiceProvider {
   final String id;
   final String name;
@@ -30,7 +31,7 @@ class ServiceProvider {
       rating: (json['rating'] ?? 0).toDouble(),
       completedJobs: json['completedJobs'] ?? 0,
       pricePerHour: (json['pricePerHour'] ?? 0).toDouble(),
-      imageUrl: json['profilePicture'] ?? '', // assuming it's a base64 string
+      imageUrl: json['profilePicture'] ?? '',
     );
   }
 }
@@ -48,18 +49,36 @@ class _SearchScreenState extends State<SearchScreen> {
   final List<String> _categories = ['All', 'Plumber', 'Electrician', 'Cleaner', 'Painter', 'Carpenter', 'Mechanic'];
 
   List<ServiceProvider> _providers = [];
+  List<ServiceProvider> _filteredProviders = [];
   bool _isLoading = false;
+  String? _token;
 
   @override
   void initState() {
     super.initState();
-    fetchServiceProviders(); // Fetch all initially
+    _getToken().then((_) => fetchServiceProviders()); // Fetch token first, then providers
+  }
+
+  // Get token from SharedPreferences
+  Future<void> _getToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _token = prefs.getString('token') ?? '';
+      });
+      
+      if (_token == null || _token!.isEmpty) {
+        print('Warning: Token is empty or null');
+      }
+    } catch (e) {
+      print('Error retrieving token: $e');
+    }
   }
 
   Future<void> fetchServiceProviders([String? category]) async {
     setState(() => _isLoading = true);
     final Uri url = category == null || category == 'All'
-        ? Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all') // adjust accordingly
+        ? Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all')
         : Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/service_type?serviceTypes=$category');
 
     try {
@@ -68,9 +87,10 @@ class _SearchScreenState extends State<SearchScreen> {
         final List data = json.decode(response.body);
         setState(() {
           _providers = data.map((json) => ServiceProvider.fromJson(json)).toList();
+          _filteredProviders = _providers;
         });
       } else {
-        print('Failed to load providers');
+        print('Failed to load providers: ${response.statusCode}');
       }
     } catch (e) {
       print('Error fetching providers: $e');
@@ -79,87 +99,41 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _showProviderDetails(ServiceProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 60,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundImage: provider.imageUrl.startsWith('data:image')
-                      ? MemoryImage(base64Decode(provider.imageUrl.split(',')[1]))
-                      : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(provider.name, style: Theme.of(context).textTheme.headlineSmall),
-                      Text(provider.serviceType, style: Theme.of(context).textTheme.titleMedium),
-                      const Text('New Provider'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('About', style: Theme.of(context).textTheme.titleLarge),
-                const Text('Professional with extensive experience in the field.'),
-                const SizedBox(height: 16),
-                Text('Services Offered', style: Theme.of(context).textTheme.titleLarge),
-                const Wrap(
-                  spacing: 8,
-                  children: [
-                    Chip(label: Text('Service 1')),
-                    Chip(label: Text('Service 2')),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text('Book Now'),
-                  ),
-                ),
-              ),
-            ),
-          ],
+  void _navigateToBooking() async {
+    if (_token == null || _token!.isEmpty) {
+      // Try to get token again if it's missing
+      await _getToken();
+      
+      if (_token == null || _token!.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Authentication required. Please log in.')),
+        );
+        return;
+      }
+    }
+    
+    // Navigate to booking screen with token
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BookingScreen(token: _token!),
         ),
-      ),
-    );
+      );
+    }
+  }
+
+  void _filterProviders(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredProviders = _providers;
+      } else {
+        _filteredProviders = _providers
+            .where((p) => p.name.toLowerCase().contains(query.toLowerCase()) || 
+                          p.serviceType.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
   }
 
   @override
@@ -180,12 +154,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 filled: true,
                 fillColor: Colors.white,
               ),
-              onChanged: (query) {
-                // Optional: filter locally by name
-                setState(() {
-                  _providers = _providers.where((p) => p.name.toLowerCase().contains(query.toLowerCase())).toList();
-                });
-              },
+              onChanged: _filterProviders,
             ),
           ),
         ),
@@ -207,6 +176,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       setState(() {
                         _selectedCategory = _categories[index];
                         fetchServiceProviders(_selectedCategory);
+                        _searchController.clear(); // Clear search when changing category
                       });
                     },
                   ),
@@ -217,48 +187,61 @@ class _SearchScreenState extends State<SearchScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    itemCount: _providers.length,
-                    itemBuilder: (context, index) {
-                      final provider = _providers[index];
-                      return Card(
-                        margin: const EdgeInsets.all(8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundImage: provider.imageUrl.startsWith('data:image')
-                                ? MemoryImage(base64Decode(provider.imageUrl.split(',')[1]))
-                                : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                          ),
-                          title: Text(provider.name),
-                          subtitle: Text(provider.serviceType),
-                         trailing: SizedBox(
-  width: 100,
-  child: Column(
-    mainAxisSize: MainAxisSize.min,
-    mainAxisAlignment: MainAxisAlignment.center,
-    crossAxisAlignment: CrossAxisAlignment.end,
-    children: [
-      Text('₵${provider.pricePerHour}/hr', style: const TextStyle(fontSize: 12)),
-      const SizedBox(height: 4),
-      SizedBox(
-        height: 30,
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            textStyle: const TextStyle(fontSize: 12),
-          ),
-          onPressed: () => _showProviderDetails(provider),
-          child: const Text('View'),
-        ),
-      ),
-    ],
-  ),
-),
-
-                        ),
-                      );
-                    },
-                  ),
+                : _filteredProviders.isEmpty
+                    ? const Center(child: Text('No service providers found'))
+                    : ListView.builder(
+                        itemCount: _filteredProviders.length,
+                        itemBuilder: (context, index) {
+                          final provider = _filteredProviders[index];
+                          return Card(
+                            margin: const EdgeInsets.all(8),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: provider.imageUrl.isNotEmpty && provider.imageUrl.startsWith('data:image')
+                                    ? MemoryImage(base64Decode(provider.imageUrl.split(',')[1]))
+                                    : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
+                              ),
+                              title: Text(provider.name),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(provider.serviceType),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.star, size: 16, color: Colors.amber),
+                                      Text(' ${provider.rating.toStringAsFixed(1)} · ${provider.completedJobs} jobs'),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: SizedBox(
+                                width: 100,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text('₵${provider.pricePerHour}/hr', style: const TextStyle(fontSize: 12)),
+                                    const SizedBox(height: 4),
+                                    SizedBox(
+                                      height: 30,
+                                      child: ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                          textStyle: const TextStyle(fontSize: 12),
+                                        ),
+                                        onPressed: _navigateToBooking,
+                                        child: const Text('Book'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              isThreeLine: true,
+                            ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
