@@ -25,8 +25,8 @@ class ServiceProvider {
 
   factory ServiceProvider.fromJson(Map<String, dynamic> json) {
     return ServiceProvider(
-      id: json['id'].toString(),
-      name: json['name'] ?? '',
+      id: json['service_provider_id'].toString(),
+      name: json['businessName'] ?? '',
       serviceType: json['serviceType'] ?? '',
       rating: (json['rating'] ?? 0).toDouble(),
       completedJobs: json['completedJobs'] ?? 0,
@@ -46,7 +46,9 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'All';
-  final List<String> _categories = ['All', 'Plumber', 'Electrician', 'Cleaner', 'Painter', 'Carpenter', 'Mechanic'];
+  final List<String> _categories = [
+    'All', 'Plumber', 'Electrician', 'Cleaner', 'Painter', 'Carpenter', 'Mechanic'
+  ];
 
   List<ServiceProvider> _providers = [];
   List<ServiceProvider> _filteredProviders = [];
@@ -56,17 +58,16 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    _getToken().then((_) => fetchServiceProviders()); // Fetch token first, then providers
+    _getToken().then((_) => fetchServiceProviders());
   }
 
-  // Get token from SharedPreferences
   Future<void> _getToken() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
         _token = prefs.getString('token') ?? '';
       });
-      
+
       if (_token == null || _token!.isEmpty) {
         print('Warning: Token is empty or null');
       }
@@ -77,6 +78,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> fetchServiceProviders([String? category]) async {
     setState(() => _isLoading = true);
+
     final Uri url = category == null || category == 'All'
         ? Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all')
         : Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/service_type?serviceTypes=$category');
@@ -99,11 +101,10 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _navigateToBooking() async {
+  void _navigateToBooking(String providerId) async {
     if (_token == null || _token!.isEmpty) {
-      // Try to get token again if it's missing
       await _getToken();
-      
+
       if (_token == null || _token!.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Authentication required. Please log in.')),
@@ -111,13 +112,12 @@ class _SearchScreenState extends State<SearchScreen> {
         return;
       }
     }
-    
-    // Navigate to booking screen with token
+
     if (mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => BookingScreen(token: _token!),
+          builder: (context) => BookingScreen(token: _token!, providerId: providerId),
         ),
       );
     }
@@ -129,115 +129,260 @@ class _SearchScreenState extends State<SearchScreen> {
         _filteredProviders = _providers;
       } else {
         _filteredProviders = _providers
-            .where((p) => p.name.toLowerCase().contains(query.toLowerCase()) || 
+            .where((p) => p.name.toLowerCase().contains(query.toLowerCase()) ||
                           p.serviceType.toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });
   }
 
+  // Improved image handling function
+  Widget buildProviderAvatar(String imageUrl) {
+    if (imageUrl.isEmpty) {
+      return const CircleAvatar(
+        backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+        radius: 30,
+      );
+    }
+
+    try {
+      if (imageUrl.startsWith('data:image')) {
+        // Handle base64 image data
+        final base64Str = imageUrl.split(',').last;
+        return CircleAvatar(
+          backgroundImage: MemoryImage(base64Decode(base64Str)),
+          radius: 30,
+        );
+      } else {
+        // Handle direct URLs
+        return CircleAvatar(
+          backgroundImage: NetworkImage(imageUrl),
+          radius: 30,
+        );
+      }
+    } catch (e) {
+      print('Error loading image: $e');
+      return CircleAvatar(
+        backgroundColor: Colors.grey.shade300,
+        child: const Icon(Icons.person, size: 30, color: Colors.grey),
+        radius: 30,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Search'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-              onChanged: _filterProviders,
-            ),
-          ),
-        ),
+        elevation: 0,
+        title: const Text('Find Services', style: TextStyle(fontWeight: FontWeight.bold)),
+      
+        foregroundColor: Colors.black,
       ),
       body: Column(
         children: [
-          SizedBox(
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+           
+            child: Column(
+              children: [
+                // Search bar with rounded corners and shadow
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search for services...',
+                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                    ),
+                    onChanged: _filterProviders,
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+          
+          // Category filters with horizontal scrolling
+          Container(
             height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: _categories.length,
               itemBuilder: (context, index) {
+                final isSelected = _selectedCategory == _categories[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: FilterChip(
+                  child: ChoiceChip(
                     label: Text(_categories[index]),
-                    selected: _selectedCategory == _categories[index],
+                    selected: isSelected,
                     onSelected: (selected) {
                       setState(() {
                         _selectedCategory = _categories[index];
                         fetchServiceProviders(_selectedCategory);
-                        _searchController.clear(); // Clear search when changing category
+                        _searchController.clear();
                       });
                     },
+                    backgroundColor: Colors.white,
+                    selectedColor: theme.primaryColor.withOpacity(0.2),
+                    labelStyle: TextStyle(
+                      color: isSelected ? theme.primaryColor : Colors.black87,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                 );
               },
             ),
           ),
+          
+          // Results count
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '${_filteredProviders.length} service providers found',
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+          
+          // Provider list
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _filteredProviders.isEmpty
-                    ? const Center(child: Text('No service providers found'))
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No service providers found',
+                              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Try changing your search criteria',
+                              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      )
                     : ListView.builder(
+                        padding: const EdgeInsets.only(top: 8, bottom: 16),
                         itemCount: _filteredProviders.length,
                         itemBuilder: (context, index) {
                           final provider = _filteredProviders[index];
                           return Card(
-                            margin: const EdgeInsets.all(8),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundImage: provider.imageUrl.isNotEmpty && provider.imageUrl.startsWith('data:image')
-                                    ? MemoryImage(base64Decode(provider.imageUrl.split(',')[1]))
-                                    : const AssetImage('assets/images/default_avatar.png') as ImageProvider,
-                              ),
-                              title: Text(provider.name),
-                              subtitle: Column(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(provider.serviceType),
-                                  Row(
+                                  // Provider avatar
+                                  buildProviderAvatar(provider.imageUrl),
+                                  const SizedBox(width: 16),
+                                  
+                                  // Provider info
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          provider.name,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            provider.serviceType,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: theme.primaryColor,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.star, size: 16, color: Colors.amber),
+                                            Text(
+                                              ' ${provider.rating.toStringAsFixed(1)}',
+                                              style: const TextStyle(fontWeight: FontWeight.bold),
+                                            ),
+                                            Text(
+                                              ' · ${provider.completedJobs} jobs completed',
+                                              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  
+                                  // Price and book button
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      const Icon(Icons.star, size: 16, color: Colors.amber),
-                                      Text(' ${provider.rating.toStringAsFixed(1)} · ${provider.completedJobs} jobs'),
+                                      Text(
+                                        '₵${provider.pricePerHour.toStringAsFixed(2)}/hr',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.primaryColor,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      ElevatedButton(
+                                        onPressed: () => _navigateToBooking(provider.id),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: theme.primaryColor,
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        ),
+                                        child: const Text('Book Now'),
+                                      ),
                                     ],
                                   ),
                                 ],
                               ),
-                              trailing: SizedBox(
-                                width: 100,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text('₵${provider.pricePerHour}/hr', style: const TextStyle(fontSize: 12)),
-                                    const SizedBox(height: 4),
-                                    SizedBox(
-                                      height: 30,
-                                      child: ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                                          textStyle: const TextStyle(fontSize: 12),
-                                        ),
-                                        onPressed: _navigateToBooking,
-                                        child: const Text('Book'),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              isThreeLine: true,
                             ),
                           );
                         },

@@ -37,7 +37,7 @@ class _NsaanoHomePageState extends State<NsaanoHomePage> {
     super.initState();
     _screens = [
       const HomeContent(),
-      BookingScreen(token: widget.token),
+      BookingScreen(token: widget.token, providerId: '',),
       const SearchScreen(),
       ProfilePage(token: widget.token),
     ];

@@ -7,7 +7,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'Screens/login.dart';
 
-
 void main() {
   runApp(
     ChangeNotifierProvider(
@@ -16,7 +15,6 @@ void main() {
     ),
   );
 }
-
 
 class NsaanoApp extends StatelessWidget {
   const NsaanoApp({super.key});
@@ -35,14 +33,23 @@ class NsaanoApp extends StatelessWidget {
             title: 'Nsaano',
             theme: ThemeData(
               primarySwatch: Colors.blue,
+              fontFamily: 'Poppins',
+              textTheme: Theme.of(context).textTheme.apply(
+                    bodyColor: Colors.black,
+                    displayColor: Colors.black,
+                  ),
               useMaterial3: true,
             ),
             initialRoute: '/splash',
             routes: {
               '/splash': (context) => const SplashScreen(),
               '/login': (context) => const LoginPage(),
-              '/home': (context) => const NsaanoHomePage(token: '',),
-              '/booking': (context) => BookingScreen(token: '',), // Keep map screen route
+              '/home': (context) => const NsaanoHomePage(
+                    token: '',
+                  ),
+              '/booking': (context) => BookingScreen(
+                    token: '', providerId: '',
+                  ), // Keep map screen route
             },
           ),
         );

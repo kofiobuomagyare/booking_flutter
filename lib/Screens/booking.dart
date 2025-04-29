@@ -6,8 +6,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class BookingScreen extends StatefulWidget {
   final String token;
+  final String providerId; // Added providerId parameter
 
-  const BookingScreen({super.key, required this.token});
+  const BookingScreen({super.key, required this.token, required this.providerId});
 
   @override
   _BookingScreenState createState() => _BookingScreenState();
@@ -27,6 +28,8 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   void initState() {
     super.initState();
+    // Set the selectedServiceProviderId from widget parameter
+    selectedServiceProviderId = widget.providerId;
     _initialize();
   }
 
