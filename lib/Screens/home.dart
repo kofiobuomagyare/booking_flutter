@@ -644,6 +644,11 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
           _isLoading = false;
         });
         debugPrint('Fetched ${_appointments.length} appointments');
+        
+        // Log a sample appointment to see its structure
+        if (_appointments.isNotEmpty) {
+          debugPrint('Sample appointment: ${json.encode(_appointments[0])}');
+        }
       } else {
         setState(() {
           _errorMessage = 'Failed to load appointments. Status code: ${response.statusCode}';
@@ -660,15 +665,23 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
     }
   }
 
-  String _formatDate(String dateString) {
+  // Safely parse the date string
+  String _formatDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return 'No date available';
+    }
+    
     try {
+      // The date format from the API is ISO 8601 format: "2025-05-20T08:30:00.000+00:00"
       final date = DateTime.parse(dateString);
       return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } catch (e) {
-      debugPrint('Error formatting date: $e');
-      return dateString;
+      debugPrint('Error parsing date: $e');
+      return 'Invalid date format';
     }
   }
+
+  // These methods are no longer needed as we're getting data directly from the nested objects
 
   @override
   Widget build(BuildContext context) {
@@ -813,9 +826,10 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
                                   final appointment = _appointments[index];
                                   
                                   // Extract data safely with null checks
-                                  final service = appointment['serviceType'] ?? 'Unknown Service';
-                                  final provider = appointment['businessName'] ?? 'Unknown Provider';
-                                  final date = appointment['appointment_date'] ?? '';
+                                  final serviceProvider = appointment['serviceProvider'];
+                                  final service = serviceProvider != null ? serviceProvider['serviceType'] ?? 'Unknown Service' : 'Unknown Service';
+                                  final provider = serviceProvider != null ? serviceProvider['businessName'] ?? 'Unknown Provider' : 'Unknown Provider';
+                                  final date = appointment['appointmentDate'] ?? appointment['appointment_date'];
                                   final status = appointment['status'] ?? 'unknown';
                                   
                                   return Container(
@@ -887,7 +901,7 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
                                               ),
                                               const SizedBox(width: 4),
                                               Text(
-                                                _formatDate(date),
+                                                _formatDate(date?.toString()),
                                                 style: TextStyle(
                                                   color: Colors.grey.shade600,
                                                 ),

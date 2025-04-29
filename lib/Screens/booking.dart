@@ -21,6 +21,8 @@ class _BookingScreenState extends State<BookingScreen> {
   bool isLoading = true;
   String errorMessage = '';
   List<dynamic> userAppointments = [];
+  // Map to store service provider details for easy lookup
+  Map<String, dynamic> providerDetailsMap = {};
   
   @override
   void initState() {
@@ -97,16 +99,27 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
-  // Fetch all service providers
+  // Fetch all service providers and create a lookup map
   Future<void> fetchServiceProviders() async {
     try {
       final response = await http.get(Uri.parse(
           'https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all'));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        final providers = json.decode(response.body);
+        
+        // Create a lookup map for providers by ID
+        Map<String, dynamic> providersMap = {};
+        for (var provider in providers) {
+          providersMap[provider['service_provider_id']] = provider;
+        }
+        
         setState(() {
-          serviceProviders = json.decode(response.body);
+          serviceProviders = providers;
+          providerDetailsMap = providersMap;
         });
+        
+        debugPrint('Loaded ${serviceProviders.length} service providers');
       } else {
         throw Exception('Failed to load service providers');
       }
@@ -170,7 +183,7 @@ class _BookingScreenState extends State<BookingScreen> {
     }
   }
 
-  // Fetch all appointments by this user using the provided endpoint
+  // Fetch all appointments by this user and enrich with provider details
   Future<void> fetchUserAppointments() async {
     if (userId.isEmpty) {
       setState(() {
@@ -186,10 +199,31 @@ class _BookingScreenState extends State<BookingScreen> {
       );
 
       if (response.statusCode == 200) {
+        final appointments = json.decode(response.body);
+        
+        // Enrich appointments with provider details
+        List<dynamic> enrichedAppointments = [];
+        for (var appointment in appointments) {
+          final String providerId = appointment['service_provider_id'];
+          final dynamic providerDetails = providerDetailsMap[providerId];
+          
+          if (providerDetails != null) {
+            // Create an enriched appointment with provider details
+            Map<String, dynamic> enrichedAppointment = Map.from(appointment);
+            enrichedAppointment['businessName'] = providerDetails['businessName'];
+            enrichedAppointment['serviceType'] = providerDetails['serviceType'];
+            
+            enrichedAppointments.add(enrichedAppointment);
+          } else {
+            // If provider details not found, still add the appointment
+            enrichedAppointments.add(appointment);
+          }
+        }
+        
         setState(() {
-          userAppointments = json.decode(response.body);
+          userAppointments = enrichedAppointments;
         });
-        debugPrint('Fetched ${userAppointments.length} appointments');
+        debugPrint('Fetched and enriched ${userAppointments.length} appointments');
       } else if (response.statusCode == 404) {
         // Not found is okay - just means no appointments
         setState(() {
@@ -239,6 +273,11 @@ class _BookingScreenState extends State<BookingScreen> {
   String _capitalizeStatus(String status) {
     if (status.isEmpty) return '';
     return status[0].toUpperCase() + status.substring(1).toLowerCase();
+  }
+
+  // Get provider details by ID (for displaying in appointments)
+  dynamic _getProviderById(String providerId) {
+    return providerDetailsMap[providerId];
   }
 
   @override
@@ -475,8 +514,14 @@ class _BookingScreenState extends State<BookingScreen> {
                               itemCount: userAppointments.length,
                               itemBuilder: (context, index) {
                                 final appointment = userAppointments[index];
-                                final serviceType = appointment['serviceType'] ?? 'Unknown Service';
-                                final businessName = appointment['businessName'] ?? 'Unknown Provider';
+                                final providerId = appointment['service_provider_id'];
+                                final provider = _getProviderById(providerId);
+                                
+                                // Get service details either from the enriched appointment or from the provider map
+                                final String serviceType = appointment['serviceType'] ?? 
+                                                          (provider != null ? provider['serviceType'] : 'Unknown Service');
+                                final String businessName = appointment['businessName'] ?? 
+                                                           (provider != null ? provider['businessName'] : 'Unknown Provider');
                                 final date = appointment['appointmentDate'] ?? '';
                                 final status = appointment['status'] ?? 'unknown';
                                 
