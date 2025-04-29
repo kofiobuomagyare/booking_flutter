@@ -102,8 +102,44 @@ class AuthService extends ChangeNotifier {
       return false;
     }
   }
+  
+  // Reset password method
+Future<bool> resetPassword(String phoneNumber, String newPassword) async {
+  _isLoading = true;
+  _errorMessage = '';
+  notifyListeners();
 
-  // Logout method
+  final url = Uri.parse('${getBaseUrl()}/api/users/reset-password');
+  try {
+    final response = await http.put(
+      url,
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: {
+        'phoneOrEmail': phoneNumber,
+        'newPassword': newPassword,
+      },
+    );
+
+    final responseData = json.decode(response.body);
+    
+    if (response.statusCode == 200) {
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = responseData['message'] ?? 'Failed to reset password';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  } catch (error) {
+    _errorMessage = 'Something went wrong. Please try again later.';
+    _isLoading = false;
+    notifyListeners();
+    return false;
+  }
+}
+    // Logout method
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();

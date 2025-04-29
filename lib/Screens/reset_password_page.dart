@@ -1,56 +1,68 @@
-import 'package:app_develop/Screens/reset_password_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
-import 'package:app_develop/Screens/service_provider_home.dart';
-import 'package:app_develop/Screens/home.dart';
-import 'package:app_develop/Screens/register_page.dart';
 import 'package:app_develop/services/auth_service.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class ResetPasswordPage extends StatefulWidget {
+  const ResetPasswordPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<ResetPasswordPage> createState() => _ResetPasswordPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _formKey = GlobalKey<FormState>();
   final _phoneNumberController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
-  @override
-  void initState() {
-    super.initState();
-    // Check if user is already logged in
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkLoginStatus();
-    });
-  }
-
-  Future<void> _checkLoginStatus() async {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    await authService.loadLoginState();
-    if (authService.isLoggedIn) {
-      _navigateBasedOnRole(authService.token!, authService.role!);
-    }
-  }
-
-  Future<void> _login() async {
+  Future<void> _resetPassword() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    // Check if passwords match
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Error'),
+          content: const Text('Passwords do not match'),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('OK'),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
 
     final authService = Provider.of<AuthService>(context, listen: false);
-    final success = await authService.login(
+    final success = await authService.resetPassword(
       _phoneNumberController.text,
-      _passwordController.text,
+      _newPasswordController.text,
     );
 
     if (!mounted) return;
 
     if (success) {
-      _navigateBasedOnRole(authService.token!, authService.role!);
-      // 👇 Log it from here
-  debugPrint('📱 Logged in user: ${authService.phoneNumber}');
+      showCupertinoDialog(
+        context: context,
+        builder: (context) => CupertinoAlertDialog(
+          title: const Text('Success'),
+          content: const Text('Password reset successfully'),
+          actions: [
+            CupertinoDialogAction(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context); // Return to login page
+              },
+            ),
+          ],
+        ),
+      );
     } else {
       showCupertinoDialog(
         context: context,
@@ -68,28 +80,11 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  void _navigateBasedOnRole(String token, String role) {
-    Navigator.pushReplacement(
-      context,
-      CupertinoPageRoute(
-        builder: (context) {
-          if (role == 'Service Seeker') {
-            return NsaanoHomePage(token: token);
-          } else if (role == 'Service Provider') {
-            return ServiceProviderHome(token: token);
-          } else {
-            return NsaanoHomePage(token: token);
-          }
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
-        middle: Text('Login'),
+        middle: Text('Reset Password'),
         backgroundColor: CupertinoColors.systemBackground,
       ),
       child: GestureDetector(
@@ -124,56 +119,27 @@ class _LoginPageState extends State<LoginPage> {
                                 keyboardType: TextInputType.phone,
                               ),
                               _buildTextField(
-                                _passwordController,
-                                'Password',
+                                _newPasswordController,
+                                'New Password',
                                 isPassword: true,
+                              ),
+                              _buildTextField(
+                                _confirmPasswordController,
+                                'Confirm Password',
+                                isPassword: true,
+                                isConfirmPassword: true,
                               ),
                               const SizedBox(height: 24),
                               Consumer<AuthService>(
                                 builder: (context, authService, child) {
                                   return CupertinoButton.filled(
-                                    onPressed: authService.isLoading ? null : _login,
+                                    onPressed: authService.isLoading ? null : _resetPassword,
                                     child: authService.isLoading
                                         ? const CupertinoActivityIndicator()
-                                        : const Text('Login'),
+                                        : const Text('Reset Password'),
                                   );
                                 },
                               ),
-                              const SizedBox(height: 16),
-                              CupertinoButton(
-  child: const Text(
-    "Don't have an account? Register",
-    style: TextStyle(
-      color: CupertinoColors.activeBlue,
-      decoration: TextDecoration.underline,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  onPressed: () => Navigator.push(
-    context,
-    CupertinoPageRoute(
-      builder: (context) => const RegisterPage(),
-    ),
-  ),
-),
-// Add this new button
-const SizedBox(height: 8),  // Add some spacing
-CupertinoButton(
-  child: const Text(
-    "Forgot Password?",
-    style: TextStyle(
-      color: CupertinoColors.activeBlue,
-      decoration: TextDecoration.underline,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-  onPressed: () => Navigator.push(
-    context,
-    CupertinoPageRoute(
-      builder: (context) => const ResetPasswordPage(),
-    ),
-  ),
-),
                             ],
                           ),
                         ),
@@ -193,6 +159,7 @@ CupertinoButton(
     TextEditingController controller,
     String placeholder, {
     bool isPassword = false,
+    bool isConfirmPassword = false,
     TextInputType? keyboardType,
   }) {
     return Padding(
@@ -205,7 +172,7 @@ CupertinoButton(
         child: CupertinoTextField(
           controller: controller,
           placeholder: placeholder,
-          obscureText: isPassword ? _obscurePassword : false,
+          obscureText: isPassword ? (isConfirmPassword ? _obscureConfirmPassword : _obscurePassword) : false,
           keyboardType: keyboardType,
           padding: const EdgeInsets.all(12),
           placeholderStyle: const TextStyle(
@@ -216,13 +183,17 @@ CupertinoButton(
               ? GestureDetector(
                   onTap: () {
                     setState(() {
-                      _obscurePassword = !_obscurePassword;
+                      if (isConfirmPassword) {
+                        _obscureConfirmPassword = !_obscureConfirmPassword;
+                      } else {
+                        _obscurePassword = !_obscurePassword;
+                      }
                     });
                   },
                   child: Icon(
-                    _obscurePassword
-                        ? CupertinoIcons.eye_slash
-                        : CupertinoIcons.eye,
+                    isConfirmPassword
+                        ? (_obscureConfirmPassword ? CupertinoIcons.eye_slash : CupertinoIcons.eye)
+                        : (_obscurePassword ? CupertinoIcons.eye_slash : CupertinoIcons.eye),
                     size: 20,
                     color: CupertinoColors.activeBlue,
                   ),
@@ -236,7 +207,8 @@ CupertinoButton(
   @override
   void dispose() {
     _phoneNumberController.dispose();
-    _passwordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }
