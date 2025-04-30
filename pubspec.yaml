@@ -48,7 +48,7 @@ flutter_icons:
   windows: true
   macos: true
   linux: true
-  image_path: "assets/images/nsaano_logo.png"  
+  image_path: "assets/images/nsaano_logoUser.jpg"  
 
 dependency_overrides:
   geolocator_android: ^5.0.1
