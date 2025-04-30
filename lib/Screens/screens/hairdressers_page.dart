@@ -62,7 +62,7 @@ class _HairdressersPageState extends State<HairdressersPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: hairdresser['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(hairdresser['profilePicture']),
+                                const Base64Decoder().convert(hairdresser['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,

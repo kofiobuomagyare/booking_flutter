@@ -64,7 +64,7 @@ class _MechanicsPageState extends State<MechanicsPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: mechanic['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(mechanic['profilePicture']),
+                                const Base64Decoder().convert(mechanic['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,

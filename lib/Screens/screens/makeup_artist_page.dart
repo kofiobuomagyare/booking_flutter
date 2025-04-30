@@ -62,7 +62,7 @@ class _MakeupArtistPageState extends State<MakeupArtistPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: artist['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(artist['profilePicture']),
+                                const Base64Decoder().convert(artist['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,

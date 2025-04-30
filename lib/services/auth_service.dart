@@ -26,7 +26,7 @@ class AuthService extends ChangeNotifier {
     } else if (Platform.isIOS) {
       return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
     } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-      return 'http://localhost:8080';
+      return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
     }
     return 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
   }

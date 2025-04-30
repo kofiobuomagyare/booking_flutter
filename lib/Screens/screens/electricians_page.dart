@@ -63,7 +63,7 @@ class _ElectriciansPageState extends State<ElectriciansPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: electrician['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(electrician['profilePicture']),
+                                const Base64Decoder().convert(electrician['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,

@@ -63,7 +63,7 @@ class _TailorsPageState extends State<TailorsPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: tailor['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(tailor['profilePicture']),
+                                const Base64Decoder().convert(tailor['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,

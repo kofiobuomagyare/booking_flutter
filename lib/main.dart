@@ -47,7 +47,7 @@ class NsaanoApp extends StatelessWidget {
               '/home': (context) => const NsaanoHomePage(
                     token: '',
                   ),
-              '/booking': (context) => BookingScreen(
+              '/booking': (context) => const BookingScreen(
                     token: '', providerId: '',
                   ), // Keep map screen route
             },

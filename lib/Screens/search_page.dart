@@ -164,8 +164,8 @@ class _SearchScreenState extends State<SearchScreen> {
       print('Error loading image: $e');
       return CircleAvatar(
         backgroundColor: Colors.grey.shade300,
-        child: const Icon(Icons.person, size: 30, color: Colors.grey),
         radius: 30,
+        child: const Icon(Icons.person, size: 30, color: Colors.grey),
       );
     }
   }
@@ -204,11 +204,11 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   child: TextField(
                     controller: _searchController,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       hintText: 'Search for services...',
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                      prefixIcon: Icon(Icons.search, color: Colors.grey),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                      contentPadding: EdgeInsets.symmetric(vertical: 15),
                     ),
                     onChanged: _filterProviders,
                   ),

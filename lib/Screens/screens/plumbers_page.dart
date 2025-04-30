@@ -64,7 +64,7 @@ class _PlumbersPageState extends State<PlumbersPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: plumber['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(plumber['profilePicture']),
+                                const Base64Decoder().convert(plumber['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,

@@ -64,7 +64,7 @@ class _MasonPageState extends State<MasonPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: mason['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(mason['profilePicture']),
+                                const Base64Decoder().convert(mason['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,

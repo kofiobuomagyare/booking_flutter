@@ -63,7 +63,7 @@ class _CarpentersPageState extends State<CarpentersPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: carpenter['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(carpenter['profilePicture']),
+                                const Base64Decoder().convert(carpenter['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,

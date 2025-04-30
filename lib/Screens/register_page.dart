@@ -247,7 +247,7 @@ String _mapServerMessageToFriendlyMessage(String? message) {
                       child: CircleAvatar(
                         radius: 60,
                         backgroundColor: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                        child: Icon(
+                        child: const Icon(
                           Icons.camera_alt,
                           color: Colors.white,
                           size: 40,

@@ -64,7 +64,7 @@ class _PaintersPageState extends State<PaintersPage> {
                         contentPadding: const EdgeInsets.all(10.0),
                         leading: painter['profilePicture'] != null
                             ? Image.memory(
-                                Base64Decoder().convert(painter['profilePicture']),
+                                const Base64Decoder().convert(painter['profilePicture']),
                                 width: 50.0,
                                 height: 50.0,
                                 fit: BoxFit.cover,
