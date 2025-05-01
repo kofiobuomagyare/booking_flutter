@@ -118,7 +118,7 @@ class _BookingScreenState extends State<BookingScreen> {
   Future<void> _fetchUserDetails(String userId) async {
     try {
       final response = await http.get(
-        Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/users/$userId'),
+        Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/users/findByUserId/$userId'),
       );
       
       if (response.statusCode == 200) {
