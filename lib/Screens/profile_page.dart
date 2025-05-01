@@ -1,22 +1,21 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:app_develop/services/profile_service.dart';
-import 'package:app_develop/services/auth_service.dart';
-import 'package:app_develop/Screens/login.dart' as screens;
 import 'package:provider/provider.dart';
+import 'package:app_develop/services/auth_service.dart';
+import 'package:app_develop/Screens/login.dart';
 import 'package:http/http.dart' as http;
 
 class ProfilePage extends StatefulWidget {
-  // Remove the required token parameter since we're using AuthService
-  const ProfilePage({super.key, required String token});
+  final String token;
+
+  const ProfilePage({super.key, required this.token});
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final ProfileService profileService = ProfileService();
   bool isLoading = true;
   String? errorMessage;
   Map<String, dynamic>? profileData;
@@ -24,7 +23,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // Use Future.microtask to ensure context is ready before accessing Provider
+    // Load user profile when widget initializes
     Future.microtask(() => _loadUserProfile());
   }
 
@@ -48,7 +47,7 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      // Get user profile directly using the phone number
+      // Fetch profile using the phone number
       final data = await _fetchProfileByPhone(phoneNumber);
       
       // Update the state with the profile data if widget is still mounted
@@ -92,7 +91,7 @@ class _ProfilePageState extends State<ProfilePage> {
     } else if (response.statusCode == 401) {
       // Token expired or invalid, redirect to login
       _redirectToLogin();
-      throw Exception('Authentication error');
+      throw Exception('Authentication failed');
     } else {
       throw Exception('Failed to load profile. Status: ${response.statusCode}');
     }
@@ -104,9 +103,34 @@ class _ProfilePageState extends State<ProfilePage> {
       Future.microtask(() {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const screens.LoginPage()),
+          MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       });
+    }
+  }
+
+  Future<void> _logout() async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      await authService.logout();
+      
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          CupertinoPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      _showError('Logout failed: $e');
+    }
+  }
+
+  void _showError(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     }
   }
 
@@ -114,37 +138,67 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text(
+          'Profile',
+          style: TextStyle(
+            color: Color(0xFF5E5CE6),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context),
+            icon: const Icon(Icons.logout, color: Color(0xFF5E5CE6)),
+            onPressed: _logout,
           ),
         ],
       ),
       body: isLoading 
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFF5E5CE6)))
           : errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(errorMessage!),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _loadUserProfile,
-                        child: const Text('Retry'),
-                      ),
-                    ],
-                  ),
-                )
+              ? _buildErrorView()
               : profileData == null
                   ? const Center(child: Text('No profile data found'))
-                  : _buildProfileContent(profileData!),
+                  : _buildProfileContent(),
     );
   }
 
-  Widget _buildProfileContent(Map<String, dynamic> data) {
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            CupertinoIcons.exclamationmark_circle,
+            size: 48,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              errorMessage ?? 'An error occurred',
+              style: TextStyle(color: Colors.grey.shade600),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _loadUserProfile,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF5E5CE6),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileContent() {
+    final data = profileData!;
     final String firstName = data['first_name'] ?? 'N/A';
     final String lastName = data['last_name'] ?? 'N/A';
     final String email = data['email'] ?? 'N/A';
@@ -157,63 +211,207 @@ class _ProfilePageState extends State<ProfilePage> {
     return RefreshIndicator(
       onRefresh: () async {
         await _loadUserProfile();
-        return;
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            if (picture.isNotEmpty)
-              CircleAvatar(
-                radius: 50,
-                backgroundImage: MemoryImage(base64Decode(picture)),
-              )
-            else
-              const CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.blueGrey,
-                child: Icon(Icons.person, size: 50, color: Colors.white),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 30),
+              
+              // Profile Picture - Wrapped in a try-catch to handle invalid base64 data
+              _buildProfilePicture(picture),
+              
+              const SizedBox(height: 24),
+              
+              // Full Name
+              Text(
+                "$firstName $lastName",
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF333333),
+                ),
+                textAlign: TextAlign.center,
               ),
-            const SizedBox(height: 20),
-            Text(
-              "$firstName $lastName",
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text("Email: $email"),
-            Text("Phone: $phone"),
-            Text("Age: $age"),
-            Text("Gender: $gender"),
-            Text("Address: $address"),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _logout(context),
-              child: const Text("Logout"),
-            ),
-          ],
+              
+              const SizedBox(height: 36),
+              
+              // Profile Details Card
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Personal Information",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5E5CE6),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      _buildInfoRow(CupertinoIcons.mail, "Email", email),
+                      const Divider(height: 24),
+                      _buildInfoRow(CupertinoIcons.phone, "Phone", phone),
+                      const Divider(height: 24),
+                      _buildInfoRow(CupertinoIcons.person, "Gender", gender),
+                      const Divider(height: 24),
+                      _buildInfoRow(CupertinoIcons.calendar, "Age", age),
+                      const Divider(height: 24),
+                      _buildInfoRow(CupertinoIcons.location, "Address", address),
+                    ],
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 36),
+              
+              // Logout Button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _logout,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5E5CE6),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    "Logout",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 40),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showError(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
+  // New method to safely handle profile picture display
+  Widget _buildProfilePicture(String pictureData) {
+    // If no picture data, display default icon
+    if (pictureData.isEmpty) {
+      return _buildDefaultProfileIcon();
+    }
+
+    // Try to decode the base64 string, display default if it fails
+    try {
+      // Clean the base64 string before decoding
+      String cleanedBase64 = _cleanBase64String(pictureData);
+      return CircleAvatar(
+        radius: 60,
+        backgroundImage: MemoryImage(base64Decode(cleanedBase64)),
       );
+    } catch (e) {
+      // If decoding fails, display default icon and log error
+      debugPrint('Error decoding profile picture: $e');
+      return _buildDefaultProfileIcon();
     }
   }
 
-  Future<void> _logout(BuildContext context) async {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    await authService.logout();
+  // Helper method to build default profile icon
+  Widget _buildDefaultProfileIcon() {
+    return Container(
+      width: 120,
+      height: 120,
+      decoration: BoxDecoration(
+        color: const Color(0xFF5E5CE6).withOpacity(0.1),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(
+        CupertinoIcons.person_fill,
+        size: 60,
+        color: Color(0xFF5E5CE6),
+      ),
+    );
+  }
+
+  // Clean base64 string to ensure it's valid
+  String _cleanBase64String(String input) {
+    // Remove any whitespace, newlines, or other non-base64 characters
+    String cleaned = input.trim()
+      .replaceAll('\n', '')
+      .replaceAll('\r', '')
+      .replaceAll(' ', '');
     
-    Navigator.pushAndRemoveUntil(
-      context,
-      CupertinoPageRoute(builder: (context) => const screens.LoginPage()),
-      (route) => false,
+    // Ensure padding is correct (must be multiple of 4)
+    while (cleaned.length % 4 != 0) {
+      cleaned += '=';
+    }
+    
+    return cleaned;
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFF5E5CE6).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            color: const Color(0xFF5E5CE6),
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF333333),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

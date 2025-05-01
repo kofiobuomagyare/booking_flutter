@@ -18,6 +18,7 @@ class _BookingScreenState extends State<BookingScreen> {
   List<dynamic> serviceProviders = [];
   String selectedServiceProviderId = '';
   String userId = '';
+  String userFirstName = ''; // Added to store user's first name
   DateTime selectedDate = DateTime.now();
   bool isLoading = true;
   String errorMessage = '';
@@ -78,17 +79,28 @@ class _BookingScreenState extends State<BookingScreen> {
       
       debugPrint('Retrieved phone number: $phoneNumber');
       
-      // Get user_id by phone number
-      final response = await http.get(
+      // First get user_id by phone number (keeping original implementation)
+      final idResponse = await http.get(
         Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/users/findUserIdByPhone?phoneNumber=$phoneNumber'),
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          userId = data['user_id'];
-        });
-        debugPrint('Retrieved user ID: $userId');
+      if (idResponse.statusCode == 200) {
+        final idData = json.decode(idResponse.body);
+        final retrievedUserId = idData['user_id'];
+        
+        if (retrievedUserId != null && retrievedUserId.isNotEmpty) {
+          setState(() {
+            userId = retrievedUserId;
+          });
+          debugPrint('Retrieved user ID: $userId');
+          
+          // Now fetch user details from the user table using the user_id
+          await _fetchUserDetails(userId);
+        } else {
+          setState(() {
+            errorMessage = 'Invalid user ID returned.';
+          });
+        }
       } else {
         setState(() {
           errorMessage = 'Failed to find user. Please check your account.';
@@ -99,6 +111,29 @@ class _BookingScreenState extends State<BookingScreen> {
         errorMessage = 'Error retrieving user ID: $e';
       });
       debugPrint('Error in _getUserId: $e');
+    }
+  }
+  
+  // Fetch user details from the user table
+  Future<void> _fetchUserDetails(String userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/users/$userId'),
+      );
+      
+      if (response.statusCode == 200) {
+        final userData = json.decode(response.body);
+        setState(() {
+          userFirstName = userData['first_name'] ?? 'User'; // Store first name with fallback
+        });
+        debugPrint('Retrieved user name: $userFirstName');
+      } else {
+        debugPrint('Failed to fetch user details: ${response.statusCode}');
+        // Not setting error message here since we already have the user ID
+      }
+    } catch (e) {
+      debugPrint('Error fetching user details: $e');
+      // Even if this fails, we can proceed with just the user ID
     }
   }
 
@@ -327,15 +362,15 @@ class _BookingScreenState extends State<BookingScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Logged in',
-                                    style: TextStyle(
+                                  Text(
+                                    'Welcome, $userFirstName',
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF5E5CE6),
                                     ),
                                   ),
                                   Text(
-                                    'User ID: $userId',
+                                    'Let\'s book your next appointment',
                                     style: TextStyle(
                                       color: Colors.grey.shade700,
                                       fontSize: 13,

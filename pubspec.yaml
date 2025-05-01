@@ -26,6 +26,7 @@ dependencies:
   provider: ^6.1.2
   permission_handler: ^11.3.1
   device_info_plus: ^10.1.0
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
@@ -41,14 +42,16 @@ flutter:
     - assets/images/
     
 
-
-flutter_icons:
+flutter_launcher_icons:
   android: true
   ios: true
-  windows: true
-  macos: true
-  linux: true
-  image_path: "assets/images/nsaano_logoUser.jpg"  
+  windows:
+    generate: true
+  macos:
+    generate: true
+  linux:
+    generate: true
+  image_path: "assets/images/nsaano_logo2.png"
 
 dependency_overrides:
   geolocator_android: ^5.0.1

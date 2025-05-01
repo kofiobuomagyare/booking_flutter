@@ -1,5 +1,6 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'dart:async';
 import 'package:app_develop/Screens/booking.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -7,6 +8,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart'; // Add this import for date formatting
 
 import 'profile_page.dart';
 import 'screens/barbers_page.dart';
@@ -18,7 +20,6 @@ import 'screens/painters_page.dart';
 import 'screens/plumbers_page.dart';
 import 'screens/see_all_page.dart';
 import 'search_page.dart';
-
 class NsaanoHomePage extends StatefulWidget {
   final String token;
 
@@ -36,7 +37,7 @@ class _NsaanoHomePageState extends State<NsaanoHomePage> {
   void initState() {
     super.initState();
     _screens = [
-      const HomeContent(),
+      HomeContent(token: widget.token),
       BookingScreen(token: widget.token, providerId: '',),
       const SearchScreen(),
       ProfilePage(token: widget.token),
@@ -95,9 +96,194 @@ class _NsaanoHomePageState extends State<NsaanoHomePage> {
   }
 }
 
-class HomeContent extends StatelessWidget {
-  const HomeContent({super.key});
+class HomeContent extends StatefulWidget {
+  final String token;
 
+  const HomeContent({super.key, required this.token});
+
+  @override
+  _HomeContentState createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<HomeContent> {
+   bool _isAvailable = true;
+  bool _isLoading = true;
+  String _userName = '';
+  String _formattedDate = '';
+  String _formattedTime = '';
+  String? _phoneNumber;
+// Store userId once fetched
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+    _updateDateTime();
+    
+    // Update time every minute
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _updateDateTime();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _updateDateTime() {
+    final now = DateTime.now();
+    setState(() {
+      _formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(now);
+      _formattedTime = DateFormat('h:mm a').format(now);
+    });
+  }
+
+  // Initialize data with a consolidated approach
+  Future<void> _initialize() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      // Get phone number from shared preferences
+      final prefs = await SharedPreferences.getInstance();
+      _phoneNumber = prefs.getString('phoneNumber');
+      
+      if (_phoneNumber == null || _phoneNumber!.isEmpty) {
+        setState(() {
+          _userName = 'there';
+          _isAvailable = false;
+          _isLoading = false;
+        });
+        return;
+      }
+      
+      String baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
+      
+      // Single API call to get user info including availability and userId
+      final userResponse = await http.get(
+        Uri.parse('$baseUrl/api/users/profile?phoneNumber=$_phoneNumber'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+
+      debugPrint('User info response: ${userResponse.statusCode} ${userResponse.body}');
+
+      if (userResponse.statusCode == 200) {
+        final userData = json.decode(userResponse.body);
+        setState(() {
+          _userName = userData['first_name'] ?? 'there';
+          _isAvailable = userData['available'] ?? true;
+// Store user ID for future use
+          _isLoading = false;
+        });
+      } else if (userResponse.statusCode == 404) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User profile not found. Please complete registration.')),
+        );
+        setState(() {
+          _userName = 'there';
+          _isAvailable = false;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _userName = 'there';
+          _isAvailable = false;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user info: $e');
+      setState(() {
+        _userName = 'there';
+        _isAvailable = false;
+        _isLoading = false;
+      });
+    }
+  }
+
+  // More efficient update availability method
+  Future<void> _updateAvailability(bool isAvailable) async {
+    if (_phoneNumber == null || _phoneNumber!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to update availability')),
+      );
+      return;
+    }
+    
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      String baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
+      
+      debugPrint('Updating availability: Phone = $_phoneNumber, isAvailable = $isAvailable');
+      
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/users/update-availability?phoneNumber=$_phoneNumber&isAvailable=$isAvailable'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      );
+
+      debugPrint('Update availability response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _isAvailable = isAvailable;
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('You are now ${isAvailable ? 'available' : 'unavailable'} for bookings'),
+            backgroundColor: isAvailable ? const Color(0xFF10B981) : Colors.grey.shade700,
+          ),
+        );
+      } else if (response.statusCode == 404) {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User profile not found. Please complete registration.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update availability. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error updating availability: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Network error updating availability. Please check your connection.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+}
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
@@ -143,9 +329,71 @@ class HomeContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                
+                // Date and time display
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _formattedDate,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF5E5CE6),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _formattedTime,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // Availability toggle
+                    _isLoading 
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF5E5CE6),
+                          ),
+                        )
+                      : Row(
+                          children: [
+                            Text(
+                              _isAvailable ? 'Available' : 'Unavailable',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: _isAvailable ? const Color(0xFF10B981) : Colors.grey.shade600,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            CupertinoSwitch(
+                              value: _isAvailable,
+                              activeTrackColor: const Color(0xFF10B981),
+                              onChanged: (value) {
+                                _updateAvailability(value);
+                              },
+                            ),
+                          ],
+                        ),
+                  ],
+                ),
+                
+                const SizedBox(height: 24),
+                
                 // Welcome message
                 Text(
-                  'Hello there!', 
+                  'Hello $_userName!', 
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -555,7 +803,6 @@ class HomeContent extends StatelessWidget {
     );
   }
 }
-
 // PastBookingsSheet with phone number authentication
 class PastBookingsSheet extends StatefulWidget {
   const PastBookingsSheet({super.key});
