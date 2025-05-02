@@ -2,13 +2,14 @@
 
 import 'dart:async';
 import 'package:app_develop/Screens/booking.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart'; // Add this import for date formatting
+import 'package:intl/intl.dart'; // Added this import for date formatting
 
 import 'profile_page.dart';
 import 'screens/barbers_page.dart';
@@ -20,6 +21,24 @@ import 'screens/painters_page.dart';
 import 'screens/plumbers_page.dart';
 import 'screens/see_all_page.dart';
 import 'search_page.dart';
+
+// Define ServiceProviderImage class at the top level, outside of any other class
+class ServiceProviderImage {
+  final String id;
+  final String caption;
+  final String uploadDate;
+  final String providerId;
+  final String mimeType;
+
+  ServiceProviderImage({
+    required this.id,
+    required this.caption,
+    required this.uploadDate,
+    required this.providerId,
+    required this.mimeType,
+  });
+}
+
 class NsaanoHomePage extends StatefulWidget {
   final String token;
 
@@ -106,20 +125,22 @@ class HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<HomeContent> {
-   bool _isAvailable = true;
+  bool _isAvailable = true;
   bool _isLoading = true;
   String _userName = '';
   String _formattedDate = '';
   String _formattedTime = '';
   String? _phoneNumber;
-// Store userId once fetched
+  // Store userId once fetched
   Timer? _timer;
+  List<ServiceProviderImage> _serviceProviderImages = [];
 
   @override
   void initState() {
     super.initState();
     _initialize();
     _updateDateTime();
+    _fetchServiceProviderImages();
     
     // Update time every minute
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
@@ -178,7 +199,7 @@ class _HomeContentState extends State<HomeContent> {
         setState(() {
           _userName = userData['first_name'] ?? 'there';
           _isAvailable = userData['available'] ?? true;
-// Store user ID for future use
+          // Store user ID for future use
           _isLoading = false;
         });
       } else if (userResponse.statusCode == 404) {
@@ -283,7 +304,74 @@ class _HomeContentState extends State<HomeContent> {
         ),
       );
     }
-}
+  }
+
+  // Fetch service provider images using the correct endpoint
+  Future<void> _fetchServiceProviderImages() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      const baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
+      
+      // Here we're retrieving service providers first
+      final providersResponse = await http.get(
+        Uri.parse('$baseUrl/api/providers/all'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (providersResponse.statusCode != 200) {
+        debugPrint('Failed to fetch providers: ${providersResponse.statusCode}');
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final providers = json.decode(providersResponse.body) as List<dynamic>;
+      List<ServiceProviderImage> allImages = [];
+
+      // For each provider, fetch their images using the endpoint from ServiceProviderImageController
+      for (final provider in providers) {
+        final providerId = provider['service_provider_id'];
+        if (providerId == null) continue;
+
+        final imagesResponse = await http.get(
+          Uri.parse('$baseUrl/api/providers/$providerId/service-images'),
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        if (imagesResponse.statusCode == 200) {
+          final imagesData = json.decode(imagesResponse.body) as List<dynamic>;
+          
+          for (final image in imagesData) {
+            allImages.add(ServiceProviderImage(
+              id: image['id'].toString(),
+              caption: image['caption'] ?? '',
+              uploadDate: image['uploadDate'] ?? '',
+              providerId: providerId,
+              mimeType: image['mimeType'] ?? 'image/jpeg',
+            ));
+          }
+        }
+
+        // Limit to prevent too many requests
+        if (allImages.length >= 10) break;
+      }
+
+      setState(() {
+        _serviceProviderImages = allImages;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching service provider images: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return CustomScrollView(
@@ -490,6 +578,7 @@ class _HomeContentState extends State<HomeContent> {
           ),
         ),
         
+        // Service Provider Images Section
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -501,7 +590,7 @@ class _HomeContentState extends State<HomeContent> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Popular Services',
+                      'Service Provider Images',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -509,7 +598,12 @@ class _HomeContentState extends State<HomeContent> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context, 
+                          CupertinoPageRoute(builder: (context) => const SeeAllPage())
+                        );
+                      },
                       child: const Text(
                         'View all',
                         style: TextStyle(
@@ -525,76 +619,69 @@ class _HomeContentState extends State<HomeContent> {
             ),
           ),
         ),
-        
-        // Popular services
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 260,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              children: [
-                _buildPopularServiceCard(
-                  context,
-                  'Premium Salon',
-                  'Stylish cuts & coloring',
-                  'assets/images/hairshop1.jpg',
-                  4.8,
-                  () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const HairdressersPage())),
-                ),
-                _buildPopularServiceCard(
-                  context,
-                  'Classic Barbershop',
-                  'Professional barbers',
-                  'assets/images/barbshop1.jpg',
-                  4.9,
-                  () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const BarbersPage())),
-                ),
-                _buildPopularServiceCard(
-                  context,
-                  'Elite Hair Salon',
-                  'Luxury treatments',
-                  'assets/images/hairshop2.jpg',
-                  4.7,
-                  () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const HairdressersPage())),
-                ),
-              ],
-            ),
-          ),
+
+        // Service Provider Images Grid
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          sliver: _isLoading
+              ? const SliverToBoxAdapter(
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF5E5CE6),
+                    ),
+                  ),
+                )
+              : _serviceProviderImages.isEmpty
+                  ? SliverToBoxAdapter(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 40.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                CupertinoIcons.photo,
+                                color: Colors.grey.shade400,
+                                size: 64,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No service provider images available',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.8,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final image = _serviceProviderImages[index];
+                          return _buildProviderImageCard(
+                            context,
+                            image.id,
+                            image.caption,
+                            image.providerId,
+                          );
+                        },
+                        childCount: _serviceProviderImages.length,
+                      ),
+                    ),
         ),
         
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                Text(
-                  'Recently Viewed',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildRecentlyViewedItem(
-                  context,
-                  'Premium Car Repair',
-                  'Mechanics',
-                  CupertinoIcons.car_detailed,
-                ),
-                _buildRecentlyViewedItem(
-                  context,
-                  'Home Plumbing Services',
-                  'Plumbers',
-                  CupertinoIcons.drop,
-                ),
-                const SizedBox(height: 100), // Bottom padding to ensure content isn't hidden behind the tab bar
-              ],
-            ),
-          ),
+        // Add bottom spacing
+        const SliverToBoxAdapter(
+          child: SizedBox(height: 100),
         ),
       ],
     );
@@ -652,19 +739,28 @@ class _HomeContentState extends State<HomeContent> {
     );
   }
 
-  Widget _buildPopularServiceCard(
+  Widget _buildProviderImageCard(
     BuildContext context,
-    String title,
-    String subtitle,
-    String imagePath,
-    double rating,
-    VoidCallback onTap,
+    String imageId,
+    String caption,
+    String providerId,
   ) {
+    const baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
+    final imageUrl = '$baseUrl/api/providers/image/$imageId';
+    
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        Navigator.push(
+          context, 
+          CupertinoPageRoute(
+            builder: (context) => BookingScreen(
+              token: widget.token,
+              providerId: providerId,
+            ),
+          )
+        );
+      },
       child: Container(
-        width: 220,
-        margin: const EdgeInsets.only(right: 16, bottom: 8, top: 8),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -679,13 +775,33 @@ class _HomeContentState extends State<HomeContent> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: Image.asset(
-                imagePath,
-                height: 140,
-                width: double.infinity,
-                fit: BoxFit.cover,
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: CachedNetworkImage(
+                  imageUrl: imageUrl,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey.shade200,
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF5E5CE6),
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.grey.shade200,
+                    child: Center(
+                      child: Icon(
+                        CupertinoIcons.photo,
+                        color: Colors.grey.shade400,
+                        size: 40,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             Padding(
@@ -694,111 +810,35 @@ class _HomeContentState extends State<HomeContent> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    caption.isNotEmpty ? caption : 'Service Provider Image',
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        CupertinoIcons.star_fill,
-                        color: Color(0xFFFFC107),
-                        size: 16,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF5E5CE6).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Book Now',
+                      style: TextStyle(
+                        color: Color(0xFF5E5CE6),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        rating.toString(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF5E5CE6).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Book',
-                          style: TextStyle(
-                            color: Color(0xFF5E5CE6),
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildRecentlyViewedItem(
-    BuildContext context,
-    String title,
-    String category,
-    IconData icon,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF5E5CE6).withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: const Color(0xFF5E5CE6)),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-          ),
-        ),
-        subtitle: Text(
-          category,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-          ),
-        ),
-        trailing: const Icon(CupertinoIcons.chevron_right, color: Colors.grey),
-        onTap: () {},
       ),
     );
   }
