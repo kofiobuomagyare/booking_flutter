@@ -31,6 +31,7 @@ class _RegisterPageState extends State<RegisterPage> {
   XFile? _profilePicture;
   bool _isLoading = false;
   bool _obscurePassword = true;
+  int? _androidSdkVersion;
 
   @override
   void dispose() {
@@ -46,104 +47,247 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   void initState() {
     super.initState();
-    checkPermissions();
+    _initPlatformState();
   }
 
-  Future<void> checkPermissions() async {
-    if (Platform.isAndroid) {
-      final androidInfo = await DeviceInfoPlugin().androidInfo;
-      final sdkInt = androidInfo.version.sdkInt;
-
-      if (sdkInt >= 33) {
-        await Permission.photos.request();
-        await Permission.camera.request();
-      } else {
-        await Permission.storage.request();
-        await Permission.camera.request();
+  Future<void> _initPlatformState() async {
+    try {
+      if (Platform.isAndroid) {
+        final androidInfo = await DeviceInfoPlugin().androidInfo;
+        _androidSdkVersion = androidInfo.version.sdkInt;
+        print("Android SDK Version: $_androidSdkVersion");
       }
-    } else {
-      await Permission.photos.request();
-      await Permission.camera.request();
+    } catch (e) {
+      print("Error getting device info: $e");
+    }
+  }
+
+  Future<bool> _requestCameraPermissions() async {
+    try {
+      // First try to request camera permissions
+      PermissionStatus cameraStatus = await Permission.camera.request();
+      print("Camera permission status: $cameraStatus");
+      
+      if (!cameraStatus.isGranted) {
+        return false;
+      }
+      
+      // Camera permission is granted, now handle storage/photos
+      if (Platform.isAndroid) {
+        if (_androidSdkVersion == null) {
+          // Fallback if we couldn't determine SDK version
+          await Permission.storage.request();
+          return await Permission.storage.isGranted;
+        }
+        
+        if (_androidSdkVersion! >= 33) { // Android 13+
+          // For Android 13+, request media permissions
+          await Permission.photos.request();
+          return await Permission.photos.isGranted;
+        } else {
+          // For Android 12 and below
+          await Permission.storage.request();
+          return await Permission.storage.isGranted;
+        }
+      } else if (Platform.isIOS) {
+        await Permission.photos.request();
+        return await Permission.photos.isGranted;
+      }
+      
+      return false;
+    } catch (e) {
+      print("Error requesting permissions: $e");
+      return false;
     }
   }
 
   Future<void> pickImage() async {
-    final cameraStatus = await Permission.camera.status;
-    final photosStatus = await Permission.photos.status;
-    final storageStatus = await Permission.storage.status;
-
-    if ((Platform.isAndroid && await _isAndroid13OrAbove())
-        ? (cameraStatus.isGranted && photosStatus.isGranted)
-        : (cameraStatus.isGranted && storageStatus.isGranted)) {
+    try {
+      print("Starting image picker...");
+      
+      // For Android, try to pick image directly first
       final picker = ImagePicker();
-      final pickedFile = await showDialog<XFile?>(context: context, builder: (context) => AlertDialog(
-        title: const Text('Pick an Image'),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              final file = await picker.pickImage(source: ImageSource.gallery);
-              Navigator.pop(context, file);
-            },
-            child: const Text('Gallery'),
-          ),
-          TextButton(
-            onPressed: () async {
-              final file = await picker.pickImage(source: ImageSource.camera);
-              Navigator.pop(context, file);
-            },
-            child: const Text('Camera'),
-          ),
-        ],
-      ));
+      
+      if (Platform.isAndroid) {
+        print("Attempting to pick image directly on Android");
+        try {
+          final XFile? pickedFile = await showDialog<XFile?>(
+            context: context, 
+            builder: (context) => AlertDialog(
+              title: const Text('Pick an Image'),
+              content: const Text('Choose image source'),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    try {
+                      final file = await picker.pickImage(source: ImageSource.gallery);
+                      Navigator.pop(context, file);
+                    } catch (e) {
+                      print("Gallery error: $e");
+                      Navigator.pop(context, null);
+                      // If direct picking fails, we'll handle permissions below
+                    }
+                  },
+                  child: const Text('Gallery'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    try {
+                      final file = await picker.pickImage(source: ImageSource.camera);
+                      Navigator.pop(context, file);
+                    } catch (e) {
+                      print("Camera error: $e");
+                      Navigator.pop(context, null);
+                      // If direct picking fails, we'll handle permissions below
+                    }
+                  },
+                  child: const Text('Camera'),
+                ),
+              ],
+            ),
+          );
 
-      if (pickedFile != null) {
-        setState(() {
-          _profilePicture = pickedFile;
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No image selected')));
+          if (pickedFile != null) {
+            setState(() {
+              _profilePicture = pickedFile;
+            });
+            return; // Success! Exit the function
+          }
+        } catch (e) {
+          print("Direct image picking failed: $e");
+          // Continue to permission handling
+        }
       }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Camera or storage/photos permission denied')));
-    }
-  }
+      
+      // If direct picking didn't work, handle permissions explicitly
+      bool permissionsGranted = await _requestCameraPermissions();
+      
+      if (permissionsGranted) {
+        print("Permissions granted, showing image source dialog");
+        
+        final XFile? pickedFile = await showDialog<XFile?>(
+          context: context, 
+          builder: (context) => AlertDialog(
+            title: const Text('Pick an Image'),
+            content: const Text('Choose image source'),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  try {
+                    final file = await picker.pickImage(source: ImageSource.gallery);
+                    Navigator.pop(context, file);
+                  } catch (e) {
+                    print("Gallery error after permissions: $e");
+                    Navigator.pop(context, null);
+                  }
+                },
+                child: const Text('Gallery'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    final file = await picker.pickImage(source: ImageSource.camera);
+                    Navigator.pop(context, file);
+                  } catch (e) {
+                    print("Camera error after permissions: $e");
+                    Navigator.pop(context, null);
+                  }
+                },
+                child: const Text('Camera'),
+              ),
+            ],
+          ),
+        );
 
-  Future<bool> _isAndroid13OrAbove() async {
-    final androidInfo = await DeviceInfoPlugin().androidInfo;
-    return androidInfo.version.sdkInt >= 33;
+        if (pickedFile != null) {
+          setState(() {
+            _profilePicture = pickedFile;
+          });
+        } else {
+          print("No image selected");
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No image selected'))
+            );
+          }
+        }
+      } else {
+        print("Permissions not granted");
+        if (mounted) {
+          // Open app settings directly since permissions are already showing as granted in system
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Permission Required'),
+              content: const Text(
+                'The app needs camera and storage permissions to access images. '
+                'Please open app settings and grant the required permissions.'
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    openAppSettings();
+                  },
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print("Error in pickImage: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error selecting image: ${e.toString()}'))
+        );
+      }
+    }
   }
 
   Future<void> _getCurrentLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location services are disabled')));
-      return;
-    }
-
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission denied')));
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location services are disabled')));
         return;
       }
-    }
 
-    if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are permanently denied')));
-      return;
-    }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission denied')));
+          return;
+        }
+      }
 
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are permanently denied')));
+        return;
+      }
 
-    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
 
-    if (placemarks.isNotEmpty) {
-      final Placemark place = placemarks.first;
-      String address = "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
-      setState(() {
-        _addressController.text = address;
-      });
+      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+
+      if (placemarks.isNotEmpty) {
+        final Placemark place = placemarks.first;
+        String address = "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+        setState(() {
+          _addressController.text = address;
+        });
+      }
+    } catch (e) {
+      print("Error getting location: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error getting location: ${e.toString()}'))
+      );
     }
   }
 
@@ -153,13 +297,17 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
+      final nameParts = _nameController.text.split(" ");
+      final firstName = nameParts[0];
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(" ") : "";
+      
       final url = getRegisterUrl();
       final response = await http.post(
         Uri.parse(url),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
-          'first_name': _nameController.text.split(" ")[0],
-          'last_name': _nameController.text.split(" ")[1],
+          'first_name': firstName,
+          'last_name': lastName,
           'email': _emailController.text,
           'password': _passwordController.text,
           'phone_number': _phoneController.text,
@@ -181,36 +329,39 @@ class _RegisterPageState extends State<RegisterPage> {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_mapServerMessageToFriendlyMessage(responseData['message']))));
         }
       } else {
+        print("Server error: ${response.statusCode} - ${response.body}");
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Oops! Something went wrong. Please try again later.')));
       }
     } catch (e) {
+      print("Registration error: $e");
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Unable to connect. Check your internet and try again.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to connect: ${e.toString()}')));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
-String _mapServerMessageToFriendlyMessage(String? message) {
-  if (message == null) {
-    return 'Unknown error occurred.';
-  }
 
-  switch (message) {
-    case 'Email already in use':
-      return 'That email is already registered. Try logging in instead.';
-    case 'Phone number already in use':
-      return 'That phone number is already linked to another account.';
-    case 'Missing required fields':
-      return 'Please fill out all the required fields.';
-    case 'Invalid email format':
-      return 'Please enter a valid email address.';
-    default:
-      print('Unrecognized server message: $message');
-      return 'Something unexpected happened. Please try again.';
+  String _mapServerMessageToFriendlyMessage(String? message) {
+    if (message == null) {
+      return 'Unknown error occurred.';
+    }
+
+    switch (message) {
+      case 'Email already in use':
+        return 'That email is already registered. Try logging in instead.';
+      case 'Phone number already in use':
+        return 'That phone number is already linked to another account.';
+      case 'Missing required fields':
+        return 'Please fill out all the required fields.';
+      case 'Invalid email format':
+        return 'Please enter a valid email address.';
+      default:
+        print('Unrecognized server message: $message');
+        return 'Something unexpected happened. Please try again.';
+    }
   }
-}
 
   String getBaseUrl() {
     if (Platform.isAndroid || Platform.isIOS) {
@@ -241,23 +392,23 @@ String _mapServerMessageToFriendlyMessage(String? message) {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Profile Picture Selection
-              _profilePicture == null
-                  ? GestureDetector(
-                      onTap: pickImage,
-                      child: CircleAvatar(
-                        radius: 60,
-                        backgroundColor: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 40,
-                        ),
+              GestureDetector(
+                onTap: pickImage,
+                child: _profilePicture == null
+                  ? CircleAvatar(
+                      radius: 60,
+                      backgroundColor: isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 40,
                       ),
                     )
                   : CircleAvatar(
                       radius: 60,
                       backgroundImage: FileImage(File(_profilePicture!.path)),
                     ),
+              ),
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _nameController,
