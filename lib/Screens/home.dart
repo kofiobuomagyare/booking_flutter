@@ -1,7 +1,9 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'dart:async';
+import 'dart:io';
 import 'package:app_develop/Screens/booking.dart';
+import 'package:app_develop/Screens/map_screen.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -39,6 +41,18 @@ class ServiceProviderImage {
   });
 }
 
+String _handleApiError(dynamic error) {
+  debugPrint('API Error: $error');
+
+  if (error is SocketException || error is TimeoutException) {
+    return 'Network error. Please check your internet connection.';
+  } else if (error is http.ClientException) {
+    return 'Server error. Please try again later.';
+  } else {
+    return 'An unexpected error occurred.';
+  }
+}
+
 class NsaanoHomePage extends StatefulWidget {
   final String token;
 
@@ -57,7 +71,11 @@ class _NsaanoHomePageState extends State<NsaanoHomePage> {
     super.initState();
     _screens = [
       HomeContent(token: widget.token),
-      BookingScreen(token: widget.token, providerId: '',),
+      BookingScreen(
+        token: widget.token,
+        providerId: '',
+      ),
+      MapScreen(token: widget.token), // New Map Screen added here
       const SearchScreen(),
       ProfilePage(token: widget.token),
     ];
@@ -98,6 +116,10 @@ class _NsaanoHomePageState extends State<NsaanoHomePage> {
               label: 'Bookings',
             ),
             BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.map),
+              label: 'Map',
+            ),
+            BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.search),
               label: 'Search',
             ),
@@ -134,17 +156,22 @@ class _HomeContentState extends State<HomeContent> {
   // Store userId once fetched
   Timer? _timer;
   List<ServiceProviderImage> _serviceProviderImages = [];
+  bool _fetchingImages = false;
+  // Flag to prevent multiple concurrent API requests
+  bool _isFetchingData = false;
+  String _errorMessage = '';
 
   @override
   void initState() {
     super.initState();
     _initialize();
     _updateDateTime();
-    _fetchServiceProviderImages();
-    
+
     // Update time every minute
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
-      _updateDateTime();
+      if (mounted) {
+        _updateDateTime();
+      }
     });
   }
 
@@ -155,6 +182,8 @@ class _HomeContentState extends State<HomeContent> {
   }
 
   void _updateDateTime() {
+    if (!mounted) return;
+
     final now = DateTime.now();
     setState(() {
       _formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(now);
@@ -164,26 +193,38 @@ class _HomeContentState extends State<HomeContent> {
 
   // Initialize data with a consolidated approach
   Future<void> _initialize() async {
+    if (!mounted || _isFetchingData) return;
+
     try {
-      setState(() {
-        _isLoading = true;
-      });
-      
+      _isFetchingData = true;
+
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
+
       // Get phone number from shared preferences
       final prefs = await SharedPreferences.getInstance();
       _phoneNumber = prefs.getString('phoneNumber');
-      
+
       if (_phoneNumber == null || _phoneNumber!.isEmpty) {
-        setState(() {
-          _userName = 'there';
-          _isAvailable = false;
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _userName = 'there';
+            _isAvailable = false;
+            _isLoading = false;
+          });
+        }
+        _isFetchingData = false;
+
+        // Still fetch images even if user info isn't available
+        await _fetchServiceProviderImages();
         return;
       }
-      
+
       String baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
-      
+
       // Single API call to get user info including availability and userId
       final userResponse = await http.get(
         Uri.parse('$baseUrl/api/users/profile?phoneNumber=$_phoneNumber'),
@@ -192,19 +233,26 @@ class _HomeContentState extends State<HomeContent> {
         },
       );
 
-      debugPrint('User info response: ${userResponse.statusCode} ${userResponse.body}');
+      debugPrint(
+          'User info response: ${userResponse.statusCode} ${userResponse.body}');
+
+      if (!mounted) {
+        _isFetchingData = false;
+        return;
+      }
 
       if (userResponse.statusCode == 200) {
         final userData = json.decode(userResponse.body);
         setState(() {
           _userName = userData['first_name'] ?? 'there';
           _isAvailable = userData['available'] ?? true;
-          // Store user ID for future use
           _isLoading = false;
         });
       } else if (userResponse.statusCode == 404) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User profile not found. Please complete registration.')),
+          const SnackBar(
+              content: Text(
+                  'User profile not found. Please complete registration.')),
         );
         setState(() {
           _userName = 'there';
@@ -218,64 +266,86 @@ class _HomeContentState extends State<HomeContent> {
           _isLoading = false;
         });
       }
+
+      _isFetchingData = false;
+
+      // Fetch images after user data
+      await _fetchServiceProviderImages();
     } catch (e) {
       debugPrint('Error fetching user info: $e');
-      setState(() {
-        _userName = 'there';
-        _isAvailable = false;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _userName = 'there';
+          _isAvailable = false;
+          _errorMessage = _handleApiError(e);
+          _isLoading = false;
+        });
+      }
+      _isFetchingData = false;
+
+      // Still try to fetch images on error
+      await _fetchServiceProviderImages();
     }
   }
 
   // More efficient update availability method
   Future<void> _updateAvailability(bool isAvailable) async {
+    if (!mounted) return;
+
     if (_phoneNumber == null || _phoneNumber!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please log in to update availability')),
       );
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       String baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
-      
-      debugPrint('Updating availability: Phone = $_phoneNumber, isAvailable = $isAvailable');
-      
+
+      debugPrint(
+          'Updating availability: Phone = $_phoneNumber, isAvailable = $isAvailable');
+
       final response = await http.put(
-        Uri.parse('$baseUrl/api/users/update-availability?phoneNumber=$_phoneNumber&isAvailable=$isAvailable'),
+        Uri.parse(
+            '$baseUrl/api/users/update-availability?phoneNumber=$_phoneNumber&isAvailable=$isAvailable'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${widget.token}',
         },
       );
 
-      debugPrint('Update availability response: ${response.statusCode} ${response.body}');
+      debugPrint(
+          'Update availability response: ${response.statusCode} ${response.body}');
+
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         setState(() {
           _isAvailable = isAvailable;
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('You are now ${isAvailable ? 'available' : 'unavailable'} for bookings'),
-            backgroundColor: isAvailable ? const Color(0xFF10B981) : Colors.grey.shade700,
+            content: Text(
+                'You are now ${isAvailable ? 'available' : 'unavailable'} for bookings'),
+            backgroundColor:
+                isAvailable ? const Color(0xFF10B981) : Colors.grey.shade700,
           ),
         );
       } else if (response.statusCode == 404) {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('User profile not found. Please complete registration.'),
+            content:
+                Text('User profile not found. Please complete registration.'),
             backgroundColor: Colors.orange,
           ),
         );
@@ -283,7 +353,7 @@ class _HomeContentState extends State<HomeContent> {
         setState(() {
           _isLoading = false;
         });
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to update availability. Please try again.'),
@@ -293,39 +363,56 @@ class _HomeContentState extends State<HomeContent> {
       }
     } catch (e) {
       debugPrint('Error updating availability: $e');
-      setState(() {
-        _isLoading = false;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Network error updating availability. Please check your connection.'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          _errorMessage = _handleApiError(e);
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Network error updating availability. Please check your connection.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
   // Fetch service provider images using the correct endpoint
   Future<void> _fetchServiceProviderImages() async {
+    if (!mounted || _fetchingImages) return;
+
     try {
-      setState(() {
-        _isLoading = true;
-      });
+      _fetchingImages = true;
+
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+        });
+      }
 
       const baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
-      
+
       // Here we're retrieving service providers first
       final providersResponse = await http.get(
         Uri.parse('$baseUrl/api/providers/all'),
         headers: {'Content-Type': 'application/json'},
       );
 
+      if (!mounted) {
+        _fetchingImages = false;
+        return;
+      }
+
       if (providersResponse.statusCode != 200) {
-        debugPrint('Failed to fetch providers: ${providersResponse.statusCode}');
+        debugPrint(
+            'Failed to fetch providers: ${providersResponse.statusCode}');
         setState(() {
           _isLoading = false;
         });
+        _fetchingImages = false;
         return;
       }
 
@@ -334,357 +421,457 @@ class _HomeContentState extends State<HomeContent> {
 
       // For each provider, fetch their images using the endpoint from ServiceProviderImageController
       for (final provider in providers) {
+        if (!mounted) {
+          _fetchingImages = false;
+          return;
+        }
+
         final providerId = provider['service_provider_id'];
         if (providerId == null) continue;
 
-        final imagesResponse = await http.get(
-          Uri.parse('$baseUrl/api/providers/$providerId/service-images'),
-          headers: {'Content-Type': 'application/json'},
-        );
+        try {
+          final imagesResponse = await http.get(
+            Uri.parse('$baseUrl/api/providers/$providerId/service-images'),
+            headers: {'Content-Type': 'application/json'},
+          );
 
-        if (imagesResponse.statusCode == 200) {
-          final imagesData = json.decode(imagesResponse.body) as List<dynamic>;
-          
-          for (final image in imagesData) {
-            allImages.add(ServiceProviderImage(
-              id: image['id'].toString(),
-              caption: image['caption'] ?? '',
-              uploadDate: image['uploadDate'] ?? '',
-              providerId: providerId,
-              mimeType: image['mimeType'] ?? 'image/jpeg',
-            ));
+          if (!mounted) {
+            _fetchingImages = false;
+            return;
           }
+
+          if (imagesResponse.statusCode == 200) {
+            final imagesData =
+                json.decode(imagesResponse.body) as List<dynamic>;
+
+            for (final image in imagesData) {
+              allImages.add(ServiceProviderImage(
+                id: image['id'].toString(),
+                caption: image['caption'] ?? '',
+                uploadDate: image['uploadDate'] ?? '',
+                providerId: providerId.toString(),
+                mimeType: image['mimeType'] ?? 'image/jpeg',
+              ));
+            }
+          }
+        } catch (e) {
+          debugPrint('Error fetching images for provider $providerId: $e');
+          // Continue with next provider
         }
 
         // Limit to prevent too many requests
         if (allImages.length >= 10) break;
       }
 
-      setState(() {
-        _serviceProviderImages = allImages;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _serviceProviderImages = allImages;
+          _isLoading = false;
+        });
+      }
+
+      _fetchingImages = false;
     } catch (e) {
       debugPrint('Error fetching service provider images: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = _handleApiError(e);
+          _isLoading = false;
+        });
+      }
+      _fetchingImages = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return CustomScrollView(
-      slivers: [
-        SliverAppBar(
-          floating: true,
-          pinned: true,
-          backgroundColor: Colors.white,
-          elevation: 0,
-          title: const Text(
-            'Nsaano',
-            style: TextStyle(
-              color: Color(0xFF5E5CE6),
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
-            ),
+    return Column(children: [
+      // Error banner at the top (only visible when there's an error)
+      if (_errorMessage.isNotEmpty)
+        Container(
+          padding: const EdgeInsets.all(12),
+          color: Colors.red[100],
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red),
+              const SizedBox(width: 8),
+              Expanded(child: Text(_errorMessage)),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() => _errorMessage = ''),
+              ),
+            ],
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(CupertinoIcons.clock, color: Color(0xFF5E5CE6)),
-              onPressed: () {
-                _showPastBookings(context);
-              },
-            ),
-            const SizedBox(width: 16),
-          ],
         ),
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                // Search bar
-                CupertinoSearchTextField(
-                  placeholder: 'Search for services...',
-                  prefixInsets: const EdgeInsets.all(8),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+      Expanded(
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              floating: true,
+              pinned: true,
+              backgroundColor: Colors.white,
+              elevation: 0,
+              title: const Text(
+                'Nsaano',
+                style: TextStyle(
+                  color: Color(0xFF5E5CE6),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
                 ),
-                const SizedBox(height: 24),
-                
-                // Date and time display
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(CupertinoIcons.clock,
+                      color: Color(0xFF5E5CE6)),
+                  onPressed: () {
+                    _showPastBookings(context);
+                  },
+                ),
+                const SizedBox(width: 16),
+              ],
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _formattedDate,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF5E5CE6),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _formattedTime,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 8),
+                    // Search bar
+                    CupertinoSearchTextField(
+                      placeholder: 'Search for services...',
+                      prefixInsets: const EdgeInsets.all(8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    
-                    // Availability toggle
-                    _isLoading 
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Color(0xFF5E5CE6),
-                          ),
-                        )
-                      : Row(
+                    const SizedBox(height: 24),
+
+                    // Date and time display
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _isAvailable ? 'Available' : 'Unavailable',
-                              style: TextStyle(
+                              _formattedDate,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
-                                color: _isAvailable ? const Color(0xFF10B981) : Colors.grey.shade600,
+                                color: Color(0xFF5E5CE6),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            CupertinoSwitch(
-                              value: _isAvailable,
-                              activeTrackColor: const Color(0xFF10B981),
-                              onChanged: (value) {
-                                _updateAvailability(value);
-                              },
+                            const SizedBox(height: 2),
+                            Text(
+                              _formattedTime,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
                           ],
                         ),
+
+                        // Availability toggle
+                        _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Color(0xFF5E5CE6),
+                                ),
+                              )
+                            : Row(
+                                children: [
+                                  Text(
+                                    _isAvailable ? 'Available' : 'Unavailable',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: _isAvailable
+                                          ? const Color(0xFF10B981)
+                                          : Colors.grey.shade600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  CupertinoSwitch(
+                                    value: _isAvailable,
+                                    activeTrackColor: const Color(0xFF10B981),
+                                    onChanged: (value) {
+                                      _updateAvailability(value);
+                                    },
+                                  ),
+                                ],
+                              ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Welcome message
+                    Text(
+                      'Hello $_userName!',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Find services you need instantly',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
-                
-                const SizedBox(height: 24),
-                
-                // Welcome message
-                Text(
-                  'Hello $_userName!', 
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Find services you need instantly',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
+              ),
             ),
-          ),
-        ),
-        
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Categories',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),
-        
-        // Categories grid
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              childAspectRatio: 0.9,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-            ),
-            delegate: SliverChildListDelegate([
-              _buildCategoryIcon(
-                context, 'Barbers', HugeIcons.strokeRoundedChairBarber, 
-                const Color(0xFFEEF2FF), const Color(0xFF5E5CE6),
-                () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const BarbersPage())),
-              ),
-              _buildCategoryIcon(
-                context, 'Hair', HugeIcons.strokeRoundedHairDryer,
-                const Color(0xFFFFF0F7), const Color(0xFFE84A7F),
-                () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const HairdressersPage())),
-              ),
-              _buildCategoryIcon(
-                context, 'Mechanics', HugeIcons.strokeRoundedRepair,
-                const Color(0xFFF0F9FF), const Color(0xFF0284C7),
-                () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const MechanicsPage())),
-              ),
-              _buildCategoryIcon(
-                context, 'Carpenters', HugeIcons.strokeRoundedTable01,
-                const Color(0xFFFFFBEB), const Color(0xFFD97706),
-                () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const CarpentersPage())),
-              ),
-              _buildCategoryIcon(
-                context, 'Painters', HugeIcons.strokeRoundedPaintBrush02,
-                const Color(0xFFECFDF5), const Color(0xFF059669),
-                () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const PaintersPage())),
-              ),
-              _buildCategoryIcon(
-                context, 'Electricians', HugeIcons.strokeRoundedElectricPlugs,
-                const Color(0xFFFFEDED), const Color(0xFFDC2626),
-                () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const ElectriciansPage())),
-              ),
-              _buildCategoryIcon(
-                context, 'Plumbers', HugeIcons.strokeRoundedWaterPump,
-                const Color(0xFFEEF2FF), const Color(0xFF4F46E5),
-                () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const PlumbersPage())),
-              ),
-              _buildCategoryIcon(
-                context, 'See all', CupertinoIcons.arrow_right_circle_fill,
-                const Color(0xFFF3F4F6), Colors.grey.shade700,
-                () => Navigator.push(context, CupertinoPageRoute(builder: (context) => const SeeAllPage())),
-              ),
-            ]),
-          ),
-        ),
-        
-        // Service Provider Images Section
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Service Provider Images',
+                      'Categories',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Colors.grey.shade800,
                       ),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context, 
-                          CupertinoPageRoute(builder: (context) => const SeeAllPage())
-                        );
-                      },
-                      child: const Text(
-                        'View all',
-                        style: TextStyle(
-                          color: Color(0xFF5E5CE6),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
-                const SizedBox(height: 8),
-              ],
+              ),
             ),
-          ),
-        ),
 
-        // Service Provider Images Grid
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          sliver: _isLoading
-              ? const SliverToBoxAdapter(
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF5E5CE6),
-                    ),
+            // Categories grid
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  childAspectRatio: 0.9,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                ),
+                delegate: SliverChildListDelegate([
+                  _buildCategoryIcon(
+                    context,
+                    'Barbers',
+                    HugeIcons.strokeRoundedChairBarber,
+                    const Color(0xFFEEF2FF),
+                    const Color(0xFF5E5CE6),
+                    () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (context) => const BarbersPage())),
                   ),
-                )
-              : _serviceProviderImages.isEmpty
-                  ? SliverToBoxAdapter(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 40.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                CupertinoIcons.photo,
-                                color: Colors.grey.shade400,
-                                size: 64,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No service provider images available',
-                                style: TextStyle(
-                                  color: Colors.grey.shade600,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
+                  _buildCategoryIcon(
+                    context,
+                    'Hair',
+                    HugeIcons.strokeRoundedHairDryer,
+                    const Color(0xFFFFF0F7),
+                    const Color(0xFFE84A7F),
+                    () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (context) => const HairdressersPage())),
+                  ),
+                  _buildCategoryIcon(
+                    context,
+                    'Mechanics',
+                    HugeIcons.strokeRoundedRepair,
+                    const Color(0xFFF0F9FF),
+                    const Color(0xFF0284C7),
+                    () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (context) => const MechanicsPage())),
+                  ),
+                  _buildCategoryIcon(
+                    context,
+                    'Carpenters',
+                    HugeIcons.strokeRoundedTable01,
+                    const Color(0xFFFFFBEB),
+                    const Color(0xFFD97706),
+                    () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (context) => const CarpentersPage())),
+                  ),
+                  _buildCategoryIcon(
+                    context,
+                    'Painters',
+                    HugeIcons.strokeRoundedPaintBrush02,
+                    const Color(0xFFECFDF5),
+                    const Color(0xFF059669),
+                    () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (context) => const PaintersPage())),
+                  ),
+                  _buildCategoryIcon(
+                    context,
+                    'Electricians',
+                    HugeIcons.strokeRoundedElectricPlugs,
+                    const Color(0xFFFFEDED),
+                    const Color(0xFFDC2626),
+                    () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (context) => const ElectriciansPage())),
+                  ),
+                  _buildCategoryIcon(
+                    context,
+                    'Plumbers',
+                    HugeIcons.strokeRoundedWaterPump,
+                    const Color(0xFFEEF2FF),
+                    const Color(0xFF4F46E5),
+                    () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (context) => const PlumbersPage())),
+                  ),
+                  _buildCategoryIcon(
+                    context,
+                    'See all',
+                    CupertinoIcons.arrow_right_circle_fill,
+                    const Color(0xFFF3F4F6),
+                    Colors.grey.shade700,
+                    () => Navigator.push(
+                        context,
+                        CupertinoPageRoute(
+                            builder: (context) => const SeeAllPage())),
+                  ),
+                ]),
+              ),
+            ),
+
+            // Service Provider Images Section
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Service Provider Images',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey.shade800,
                           ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                                context,
+                                CupertinoPageRoute(
+                                    builder: (context) => const SeeAllPage()));
+                          },
+                          child: const Text(
+                            'View all',
+                            style: TextStyle(
+                              color: Color(0xFF5E5CE6),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
+
+            // Service Provider Images Grid
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              sliver: _isLoading
+                  ? const SliverToBoxAdapter(
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF5E5CE6),
                         ),
                       ),
                     )
-                  : SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.8,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final image = _serviceProviderImages[index];
-                          return _buildProviderImageCard(
-                            context,
-                            image.id,
-                            image.caption,
-                            image.providerId,
-                          );
-                        },
-                        childCount: _serviceProviderImages.length,
-                      ),
-                    ),
+                  : _serviceProviderImages.isEmpty
+                      ? SliverToBoxAdapter(
+                          child: Center(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 40.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    CupertinoIcons.photo,
+                                    color: Colors.grey.shade400,
+                                    size: 64,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'No service provider images available',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                      : SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.8,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final image = _serviceProviderImages[index];
+                              return _buildProviderImageCard(
+                                context,
+                                image.id,
+                                image.caption,
+                                image.providerId,
+                              );
+                            },
+                            childCount: _serviceProviderImages.length,
+                          ),
+                        ),
+            ),
+
+            // Add bottom spacing
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 100),
+            ),
+          ],
         ),
-        
-        // Add bottom spacing
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 100),
-        ),
-      ],
-    );
+      ),
+    ]);
   }
 
   void _showPastBookings(BuildContext context) {
@@ -747,18 +934,17 @@ class _HomeContentState extends State<HomeContent> {
   ) {
     const baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
     final imageUrl = '$baseUrl/api/providers/image/$imageId';
-    
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
-          context, 
-          CupertinoPageRoute(
-            builder: (context) => BookingScreen(
-              token: widget.token,
-              providerId: providerId,
-            ),
-          )
-        );
+            context,
+            CupertinoPageRoute(
+              builder: (context) => BookingScreen(
+                token: widget.token,
+                providerId: providerId,
+              ),
+            ));
       },
       child: Container(
         decoration: BoxDecoration(
@@ -777,7 +963,8 @@ class _HomeContentState extends State<HomeContent> {
           children: [
             Expanded(
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: CachedNetworkImage(
                   imageUrl: imageUrl,
                   width: double.infinity,
@@ -820,7 +1007,8 @@ class _HomeContentState extends State<HomeContent> {
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFF5E5CE6).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -843,6 +1031,7 @@ class _HomeContentState extends State<HomeContent> {
     );
   }
 }
+
 // PastBookingsSheet with phone number authentication
 class PastBookingsSheet extends StatefulWidget {
   const PastBookingsSheet({super.key});
@@ -869,7 +1058,7 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
       // Get the stored phone number from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final phoneNumber = prefs.getString('phoneNumber');
-      
+
       if (phoneNumber == null || phoneNumber.isEmpty) {
         setState(() {
           _errorMessage = 'User phone number not found. Please log in again.';
@@ -877,15 +1066,16 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
         });
         return;
       }
-      
+
       debugPrint('Retrieved phone number: $phoneNumber');
-      
+
       // Get the base URL for API calls
       String baseUrl = 'https://salty-citadel-42862-262ec2972a46.herokuapp.com';
-      
+
       // First API call: Get user_id by phone number
       final userResponse = await http.get(
-        Uri.parse('$baseUrl/api/users/findUserIdByPhone?phoneNumber=$phoneNumber'),
+        Uri.parse(
+            '$baseUrl/api/users/findUserIdByPhone?phoneNumber=$phoneNumber'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -894,14 +1084,15 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
       if (userResponse.statusCode == 200) {
         final userData = json.decode(userResponse.body);
         _userId = userData['user_id'];
-        
+
         debugPrint('Retrieved user ID: $_userId');
-        
+
         // Now fetch appointments with the obtained user_id
         await _fetchAppointments(baseUrl, _userId!);
       } else {
         setState(() {
-          _errorMessage = 'Failed to find user. Status code: ${userResponse.statusCode}';
+          _errorMessage =
+              'Failed to find user. Status code: ${userResponse.statusCode}';
           _isLoading = false;
         });
       }
@@ -931,14 +1122,15 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
           _isLoading = false;
         });
         debugPrint('Fetched ${_appointments.length} appointments');
-        
+
         // Log a sample appointment to see its structure
         if (_appointments.isNotEmpty) {
           debugPrint('Sample appointment: ${json.encode(_appointments[0])}');
         }
       } else {
         setState(() {
-          _errorMessage = 'Failed to load appointments. Status code: ${response.statusCode}';
+          _errorMessage =
+              'Failed to load appointments. Status code: ${response.statusCode}';
           _isLoading = false;
         });
         debugPrint('Error fetching appointments: ${response.statusCode}');
@@ -957,7 +1149,7 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
     if (dateString == null || dateString.isEmpty) {
       return 'No date available';
     }
-    
+
     try {
       // The date format from the API is ISO 8601 format: "2025-05-20T08:30:00.000+00:00"
       final date = DateTime.parse(dateString);
@@ -991,7 +1183,8 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.05),
@@ -1026,7 +1219,7 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
                   ],
                 ),
               ),
-              
+
               // Content
               Expanded(
                 child: _isLoading
@@ -1047,7 +1240,8 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
                                 ),
                                 const SizedBox(height: 16),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24),
                                   child: Text(
                                     _errorMessage,
                                     style: TextStyle(
@@ -1111,14 +1305,23 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
                                 padding: const EdgeInsets.all(16),
                                 itemBuilder: (context, index) {
                                   final appointment = _appointments[index];
-                                  
+
                                   // Extract data safely with null checks
-                                  final serviceProvider = appointment['serviceProvider'];
-                                  final service = serviceProvider != null ? serviceProvider['serviceType'] ?? 'Unknown Service' : 'Unknown Service';
-                                  final provider = serviceProvider != null ? serviceProvider['businessName'] ?? 'Unknown Provider' : 'Unknown Provider';
-                                  final date = appointment['appointmentDate'] ?? appointment['appointment_date'];
-                                  final status = appointment['status'] ?? 'unknown';
-                                  
+                                  final serviceProvider =
+                                      appointment['serviceProvider'];
+                                  final service = serviceProvider != null
+                                      ? serviceProvider['serviceType'] ??
+                                          'Unknown Service'
+                                      : 'Unknown Service';
+                                  final provider = serviceProvider != null
+                                      ? serviceProvider['businessName'] ??
+                                          'Unknown Provider'
+                                      : 'Unknown Provider';
+                                  final date = appointment['appointmentDate'] ??
+                                      appointment['appointment_date'];
+                                  final status =
+                                      appointment['status'] ?? 'unknown';
+
                                   return Container(
                                     margin: const EdgeInsets.only(bottom: 16),
                                     decoration: BoxDecoration(
@@ -1135,7 +1338,8 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Row(
                                             children: [
@@ -1147,17 +1351,21 @@ class _PastBookingsSheetState extends State<PastBookingsSheet> {
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                   maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ),
                                               Container(
-                                                padding: const EdgeInsets.symmetric(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
                                                   horizontal: 12,
                                                   vertical: 4,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: _getStatusColor(status),
-                                                  borderRadius: BorderRadius.circular(12),
+                                                  color:
+                                                      _getStatusColor(status),
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
                                                 ),
                                                 child: Text(
                                                   _capitalizeStatus(status),
