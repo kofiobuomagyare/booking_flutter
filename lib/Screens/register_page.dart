@@ -67,11 +67,11 @@ class _RegisterPageState extends State<RegisterPage> {
       // First try to request camera permissions
       PermissionStatus cameraStatus = await Permission.camera.request();
       print("Camera permission status: $cameraStatus");
-      
+
       if (!cameraStatus.isGranted) {
         return false;
       }
-      
+
       // Camera permission is granted, now handle storage/photos
       if (Platform.isAndroid) {
         if (_androidSdkVersion == null) {
@@ -79,8 +79,9 @@ class _RegisterPageState extends State<RegisterPage> {
           await Permission.storage.request();
           return await Permission.storage.isGranted;
         }
-        
-        if (_androidSdkVersion! >= 33) { // Android 13+
+
+        if (_androidSdkVersion! >= 33) {
+          // Android 13+
           // For Android 13+, request media permissions
           await Permission.photos.request();
           return await Permission.photos.isGranted;
@@ -93,7 +94,7 @@ class _RegisterPageState extends State<RegisterPage> {
         await Permission.photos.request();
         return await Permission.photos.isGranted;
       }
-      
+
       return false;
     } catch (e) {
       print("Error requesting permissions: $e");
@@ -104,15 +105,15 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> pickImage() async {
     try {
       print("Starting image picker...");
-      
+
       // For Android, try to pick image directly first
       final picker = ImagePicker();
-      
+
       if (Platform.isAndroid) {
         print("Attempting to pick image directly on Android");
         try {
           final XFile? pickedFile = await showDialog<XFile?>(
-            context: context, 
+            context: context,
             builder: (context) => AlertDialog(
               title: const Text('Pick an Image'),
               content: const Text('Choose image source'),
@@ -120,7 +121,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 TextButton(
                   onPressed: () async {
                     try {
-                      final file = await picker.pickImage(source: ImageSource.gallery);
+                      final file =
+                          await picker.pickImage(source: ImageSource.gallery);
                       Navigator.pop(context, file);
                     } catch (e) {
                       print("Gallery error: $e");
@@ -133,7 +135,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 TextButton(
                   onPressed: () async {
                     try {
-                      final file = await picker.pickImage(source: ImageSource.camera);
+                      final file =
+                          await picker.pickImage(source: ImageSource.camera);
                       Navigator.pop(context, file);
                     } catch (e) {
                       print("Camera error: $e");
@@ -158,15 +161,15 @@ class _RegisterPageState extends State<RegisterPage> {
           // Continue to permission handling
         }
       }
-      
+
       // If direct picking didn't work, handle permissions explicitly
       bool permissionsGranted = await _requestCameraPermissions();
-      
+
       if (permissionsGranted) {
         print("Permissions granted, showing image source dialog");
-        
+
         final XFile? pickedFile = await showDialog<XFile?>(
-          context: context, 
+          context: context,
           builder: (context) => AlertDialog(
             title: const Text('Pick an Image'),
             content: const Text('Choose image source'),
@@ -174,7 +177,8 @@ class _RegisterPageState extends State<RegisterPage> {
               TextButton(
                 onPressed: () async {
                   try {
-                    final file = await picker.pickImage(source: ImageSource.gallery);
+                    final file =
+                        await picker.pickImage(source: ImageSource.gallery);
                     Navigator.pop(context, file);
                   } catch (e) {
                     print("Gallery error after permissions: $e");
@@ -186,7 +190,8 @@ class _RegisterPageState extends State<RegisterPage> {
               TextButton(
                 onPressed: () async {
                   try {
-                    final file = await picker.pickImage(source: ImageSource.camera);
+                    final file =
+                        await picker.pickImage(source: ImageSource.camera);
                     Navigator.pop(context, file);
                   } catch (e) {
                     print("Camera error after permissions: $e");
@@ -207,8 +212,7 @@ class _RegisterPageState extends State<RegisterPage> {
           print("No image selected");
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('No image selected'))
-            );
+                const SnackBar(content: Text('No image selected')));
           }
         }
       } else {
@@ -220,9 +224,8 @@ class _RegisterPageState extends State<RegisterPage> {
             builder: (context) => AlertDialog(
               title: const Text('Permission Required'),
               content: const Text(
-                'The app needs camera and storage permissions to access images. '
-                'Please open app settings and grant the required permissions.'
-              ),
+                  'The app needs camera and storage permissions to access images. '
+                  'Please open app settings and grant the required permissions.'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -244,8 +247,7 @@ class _RegisterPageState extends State<RegisterPage> {
       print("Error in pickImage: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error selecting image: ${e.toString()}'))
-        );
+            SnackBar(content: Text('Error selecting image: ${e.toString()}')));
       }
     }
   }
@@ -254,7 +256,8 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location services are disabled')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location services are disabled')));
         return;
       }
 
@@ -262,23 +265,28 @@ class _RegisterPageState extends State<RegisterPage> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permission denied')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Location permission denied')));
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location permissions are permanently denied')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Location permissions are permanently denied')));
         return;
       }
 
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
 
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+      List<Placemark> placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
 
       if (placemarks.isNotEmpty) {
         final Placemark place = placemarks.first;
-        String address = "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+        String address =
+            "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
         setState(() {
           _addressController.text = address;
         });
@@ -286,8 +294,7 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       print("Error getting location: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error getting location: ${e.toString()}'))
-      );
+          SnackBar(content: Text('Error getting location: ${e.toString()}')));
     }
   }
 
@@ -299,8 +306,14 @@ class _RegisterPageState extends State<RegisterPage> {
     try {
       final nameParts = _nameController.text.split(" ");
       final firstName = nameParts[0];
-      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(" ") : "";
-      
+      final lastName =
+          nameParts.length > 1 ? nameParts.sublist(1).join(" ") : "";
+      String? base64ProfileImage;
+      if (_profilePicture != null) {
+        final bytes = await File(_profilePicture!.path).readAsBytes();
+        base64ProfileImage = base64Encode(bytes);
+      }
+
       final url = getRegisterUrl();
       final response = await http.post(
         Uri.parse(url),
@@ -313,7 +326,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'phone_number': _phoneController.text,
           'age': int.tryParse(_selectedAge ?? '0'),
           'gender': _selectedGender,
-          'profile_picture': _profilePicture?.path ?? '',
+          'profile_picture': base64ProfileImage ?? '',
           'role': 'User',
           'address': _addressController.text,
           'bio': _bioController.text,
@@ -323,19 +336,25 @@ class _RegisterPageState extends State<RegisterPage> {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = json.decode(response.body);
         if (responseData['message'] == 'User registered successfully') {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registration successful! Please log in.')));
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Registration successful! Please log in.')));
           Navigator.pushReplacementNamed(context, '/login');
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(_mapServerMessageToFriendlyMessage(responseData['message']))));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(_mapServerMessageToFriendlyMessage(
+                  responseData['message']))));
         }
       } else {
         print("Server error: ${response.statusCode} - ${response.body}");
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Oops! Something went wrong. Please try again later.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content:
+                Text('Oops! Something went wrong. Please try again later.')));
       }
     } catch (e) {
       print("Registration error: $e");
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unable to connect: ${e.toString()}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to connect: ${e.toString()}')));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -395,54 +414,63 @@ class _RegisterPageState extends State<RegisterPage> {
               GestureDetector(
                 onTap: pickImage,
                 child: _profilePicture == null
-                  ? CircleAvatar(
-                      radius: 60,
-                      backgroundColor: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-                      child: const Icon(
-                        Icons.camera_alt,
-                        color: Colors.white,
-                        size: 40,
+                    ? CircleAvatar(
+                        radius: 60,
+                        backgroundColor:
+                            isDarkMode ? Colors.grey[700] : Colors.grey[300],
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 40,
+                        ),
+                      )
+                    : CircleAvatar(
+                        radius: 60,
+                        backgroundImage: FileImage(File(_profilePicture!.path)),
                       ),
-                    )
-                  : CircleAvatar(
-                      radius: 60,
-                      backgroundImage: FileImage(File(_profilePicture!.path)),
-                    ),
               ),
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: 'Full Name',
-                  labelStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+                  labelStyle: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black),
                   filled: true,
                   fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                 ),
-                validator: (value) => value == null || value.isEmpty ? 'Enter your name' : null,
+                validator: (value) =>
+                    value == null || value.isEmpty ? 'Enter your name' : null,
               ),
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  labelStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-                  filled: true,
-                  fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                ),
-                keyboardType: TextInputType.emailAddress,
-                validator: (value) => value == null || !value.contains('@') ? 'Enter a valid email' : null,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Email is required';
+                  }
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                    return 'Enter a valid email';
+                  }
+                  return null;
+                },
+                decoration: const InputDecoration(labelText: 'Email'),
               ),
+
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   labelText: 'Password',
-                  labelStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+                  labelStyle: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black),
                   filled: true,
                   fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                    icon: Icon(_obscurePassword
+                        ? Icons.visibility_off
+                        : Icons.visibility),
                     onPressed: () {
                       setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -450,67 +478,60 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                 ),
-                validator: (value) => value != null && value.length < 6 ? 'Minimum 6 characters' : null,
+                validator: (value) => value != null && value.length < 6
+                    ? 'Minimum 6 characters'
+                    : null,
               ),
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _phoneController,
                 decoration: InputDecoration(
                   labelText: 'Phone',
-                  labelStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+                  labelStyle: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black),
                   filled: true,
                   fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                 ),
                 keyboardType: TextInputType.phone,
-                validator: (value) => value == null || value.isEmpty ? 'Enter phone number' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Enter phone number'
+                    : null,
               ),
               SizedBox(height: 16.h),
               DropdownButtonFormField<String>(
                 value: _selectedAge,
-                onChanged: (value) => setState(() {
-                  _selectedAge = value;
-                }),
-                items: List.generate(100, (index) {
-                  return DropdownMenuItem(
-                    value: (index + 1).toString(),
-                    child: Text((index + 1).toString()),
-                  );
-                }),
-                decoration: InputDecoration(
-                  labelText: 'Age',
-                  labelStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-                  filled: true,
-                  fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                ),
+                items: List.generate(83, (index) => (index + 18).toString())
+                    .map(
+                        (age) => DropdownMenuItem(value: age, child: Text(age)))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedAge = value),
+                decoration: const InputDecoration(labelText: 'Age'),
               ),
+
               SizedBox(height: 16.h),
               DropdownButtonFormField<String>(
                 value: _selectedGender,
-                onChanged: (value) => setState(() {
-                  _selectedGender = value;
-                }),
-                items: const [
-                  DropdownMenuItem(value: 'Male', child: Text('Male')),
-                  DropdownMenuItem(value: 'Female', child: Text('Female')),
-                  DropdownMenuItem(value: 'Other', child: Text('Other')),
-                ],
-                decoration: InputDecoration(
-                  labelText: 'Gender',
-                  labelStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-                  filled: true,
-                  fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-                ),
+                items: ['Male', 'Female', 'Other']
+                    .map((gender) =>
+                        DropdownMenuItem(value: gender, child: Text(gender)))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedGender = value),
+                decoration: const InputDecoration(labelText: 'Gender'),
               ),
+
               SizedBox(height: 16.h),
               TextFormField(
                 controller: _addressController,
                 decoration: InputDecoration(
                   labelText: 'Address',
-                  labelStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+                  labelStyle: TextStyle(
+                      color: isDarkMode ? Colors.white : Colors.black),
                   filled: true,
                   fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
                 ),
-                validator: (value) => value == null || value.isEmpty ? 'Enter your address' : null,
+                validator: (value) => value == null || value.isEmpty
+                    ? 'Enter your address'
+                    : null,
               ),
               SizedBox(height: 16.h),
               Row(

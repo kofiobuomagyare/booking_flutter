@@ -1,10 +1,10 @@
 import 'dart:convert';
+import 'package:app_develop/Screens/edit_profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:app_develop/services/auth_service.dart';
 import 'package:app_develop/Screens/login.dart';
-import 'package:http/http.dart' as http;
 
 class ProfilePage extends StatefulWidget {
   final String token;
@@ -47,15 +47,31 @@ class _ProfilePageState extends State<ProfilePage> {
         return;
       }
 
-      // Fetch profile using the phone number
-      final data = await _fetchProfileByPhone(phoneNumber);
+      // Use the AuthService.fetchUserProfile() method instead of custom implementation
+      final result = await authService.fetchUserProfile();
       
-      // Update the state with the profile data if widget is still mounted
-      if (mounted) {
-        setState(() {
-          profileData = data;
-          isLoading = false;
-        });
+      if (result['success']) {
+        // Update the state with the profile data if widget is still mounted
+        if (mounted) {
+          setState(() {
+            profileData = result['data'];
+            isLoading = false;
+          });
+        }
+      } else {
+        // Handle error from AuthService
+        if (mounted) {
+          setState(() {
+            errorMessage = result['message'];
+            isLoading = false;
+          });
+          _showError(result['message']);
+          
+          // If authentication expired, redirect to login
+          if (result['message'] == 'Authentication expired') {
+            _redirectToLogin();
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -68,35 +84,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<Map<String, dynamic>> _fetchProfileByPhone(String phoneNumber) async {
-    final authService = Provider.of<AuthService>(context, listen: false);
-    final baseUrl = authService.getBaseUrl();
-    final token = authService.token;
-    
-    if (token == null) {
-      _redirectToLogin();
-      throw Exception('Authentication token is missing');
-    }
-    
-    final response = await http.get(
-      Uri.parse('$baseUrl/api/users/profile?phoneNumber=$phoneNumber'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else if (response.statusCode == 401) {
-      // Token expired or invalid, redirect to login
-      _redirectToLogin();
-      throw Exception('Authentication failed');
-    } else {
-      throw Exception('Failed to load profile. Status: ${response.statusCode}');
-    }
-  }
-
   void _redirectToLogin() {
     // Only navigate if the widget is still mounted
     if (mounted) {
@@ -106,6 +93,32 @@ class _ProfilePageState extends State<ProfilePage> {
           MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       });
+    }
+  }
+
+  Future<void> _navigateToEditProfile() async {
+    if (profileData == null) return;
+    
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final token = authService.token;
+    if (token == null) {
+      _redirectToLogin();
+      return;
+    }
+    
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditProfilePage(
+          profileData: profileData!,
+          token: token,
+        ),
+      ),
+    );
+    
+    // If profile was updated, reload the profile data
+    if (result == true) {
+      _loadUserProfile();
     }
   }
 
@@ -221,8 +234,34 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               const SizedBox(height: 30),
               
-              // Profile Picture - Wrapped in a try-catch to handle invalid base64 data
-              _buildProfilePicture(picture),
+              // Profile Picture with Edit Button Overlay
+              Stack(
+                children: [
+                  // Profile Picture
+                  _buildProfilePicture(picture),
+                  
+                  // Edit Button
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: GestureDetector(
+                      onTap: _navigateToEditProfile,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF5E5CE6),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.edit,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               
               const SizedBox(height: 24),
               
@@ -259,13 +298,34 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Personal Information",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5E5CE6),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            "Personal Information",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF5E5CE6),
+                            ),
+                          ),
+                          // Edit Button
+                          TextButton.icon(
+                            onPressed: _navigateToEditProfile,
+                            icon: const Icon(
+                              Icons.edit,
+                              size: 16,
+                              color: Color(0xFF5E5CE6),
+                            ),
+                            label: const Text(
+                              "Edit",
+                              style: TextStyle(
+                                color: Color(0xFF5E5CE6),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 20),
                       
@@ -316,7 +376,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // New method to safely handle profile picture display
+  // Method to safely handle profile picture display
   Widget _buildProfilePicture(String pictureData) {
     // If no picture data, display default icon
     if (pictureData.isEmpty) {

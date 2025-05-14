@@ -76,31 +76,57 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  Future<void> fetchServiceProviders([String? category]) async {
-    setState(() => _isLoading = true);
+Future<void> fetchServiceProviders([String? category]) async {
+  setState(() => _isLoading = true);
 
-    final Uri url = category == null || category == 'All'
-        ? Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all')
-        : Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/service_type?serviceTypes=$category');
+  final Uri url = category == null || category == 'All'
+      ? Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/all')
+      : Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/providers/service_type?serviceTypes=$category');
 
-    try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final List data = json.decode(response.body);
-        setState(() {
-          _providers = data.map((json) => ServiceProvider.fromJson(json)).toList();
-          _filteredProviders = _providers;
-        });
-      } else {
-        print('Failed to load providers: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error fetching providers: $e');
-    } finally {
-      setState(() => _isLoading = false);
+  try {
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final List data = json.decode(response.body);
+      
+      // Fetch completed jobs count for each provider
+      final providersWithJobs = await Future.wait(data.map((json) async {
+        final providerId = json['service_provider_id'].toString();
+        final numericId = int.tryParse(providerId.replaceAll('nsaserv', ''));
+        
+        if (numericId != null) {
+          try {
+            final completedJobsResponse = await http.get(
+              Uri.parse('https://salty-citadel-42862-262ec2972a46.herokuapp.com/api/appointments/appointments/completed/count?providerId=$numericId')
+            );
+            
+            if (completedJobsResponse.statusCode == 200) {
+              json['completedJobs'] = jsonDecode(completedJobsResponse.body);
+            } else {
+              json['completedJobs'] = 0;
+            }
+          } catch (e) {
+            json['completedJobs'] = 0;
+          }
+        } else {
+          json['completedJobs'] = 0;
+        }
+        
+        return ServiceProvider.fromJson(json);
+      }).toList());
+
+      setState(() {
+        _providers = providersWithJobs;
+        _filteredProviders = _providers;
+      });
+    } else {
+      print('Failed to load providers: ${response.statusCode}');
     }
+  } catch (e) {
+    print('Error fetching providers: $e');
+  } finally {
+    setState(() => _isLoading = false);
   }
-
+}
   void _navigateToBooking(String providerId) async {
     if (_token == null || _token!.isEmpty) {
       await _getToken();
@@ -137,38 +163,41 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   // Improved image handling function
-  Widget buildProviderAvatar(String imageUrl) {
-    if (imageUrl.isEmpty) {
-      return const CircleAvatar(
-        backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
-        radius: 30,
-      );
-    }
-
-    try {
-      if (imageUrl.startsWith('data:image')) {
-        // Handle base64 image data
-        final base64Str = imageUrl.split(',').last;
-        return CircleAvatar(
-          backgroundImage: MemoryImage(base64Decode(base64Str)),
-          radius: 30,
-        );
-      } else {
-        // Handle direct URLs
-        return CircleAvatar(
-          backgroundImage: NetworkImage(imageUrl),
-          radius: 30,
-        );
-      }
-    } catch (e) {
-      print('Error loading image: $e');
-      return CircleAvatar(
-        backgroundColor: Colors.grey.shade300,
-        radius: 30,
-        child: const Icon(Icons.person, size: 30, color: Colors.grey),
-      );
-    }
+ Widget buildProviderAvatar(String imageUrl) {
+  if (imageUrl.isEmpty) {
+    return const CircleAvatar(
+      backgroundImage: AssetImage('assets/images/default_avatar.jpg'),
+      radius: 30,
+    );
   }
+
+  try {
+    // Check if it's a base64 string, even with a leading slash
+    final isBase64 = imageUrl.length > 100 && !imageUrl.contains('http');
+
+    if (isBase64) {
+      // Remove prefix if it exists (just in case)
+      final base64Str = imageUrl.contains(',') ? imageUrl.split(',').last : imageUrl;
+      return CircleAvatar(
+        backgroundImage: MemoryImage(base64Decode(base64Str)),
+        radius: 30,
+      );
+    } else {
+      return CircleAvatar(
+        backgroundImage: NetworkImage(imageUrl),
+        radius: 30,
+      );
+    }
+  } catch (e) {
+    print('Error loading image: $e');
+    return CircleAvatar(
+      backgroundColor: Colors.grey.shade300,
+      radius: 30,
+      child: const Icon(Icons.person, size: 30, color: Colors.grey),
+    );
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {

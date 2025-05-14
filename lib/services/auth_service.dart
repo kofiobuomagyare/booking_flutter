@@ -58,7 +58,7 @@ class AuthService extends ChangeNotifier {
   }
 
   // Login method using phone number and password
- Future<bool> login(String phoneNumber, String password) async {
+  Future<bool> login(String phoneNumber, String password) async {
     _isLoading = true;
     notifyListeners();
 
@@ -83,8 +83,8 @@ class AuthService extends ChangeNotifier {
           phoneNumber,
         );
         
-  // ✅ Log phone number here
-  debugPrint('📱 Phone number saved: $_phoneNumber');
+        // Log phone number here
+        debugPrint('📱 Phone number saved: $_phoneNumber');
 
         _isLoading = false;
         notifyListeners();
@@ -104,42 +104,176 @@ class AuthService extends ChangeNotifier {
   }
   
   // Reset password method
-Future<bool> resetPassword(String phoneNumber, String newPassword) async {
-  _isLoading = true;
-  _errorMessage = '';
-  notifyListeners();
+  Future<bool> resetPassword(String phoneNumber, String newPassword) async {
+    _isLoading = true;
+    _errorMessage = '';
+    notifyListeners();
 
-  final url = Uri.parse('${getBaseUrl()}/api/users/reset-password');
-  try {
-    final response = await http.put(
-      url,
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: {
-        'phoneOrEmail': phoneNumber,
-        'newPassword': newPassword,
-      },
-    );
+    final url = Uri.parse('${getBaseUrl()}/api/users/reset-password');
+    try {
+      final response = await http.put(
+        url,
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'phoneOrEmail': phoneNumber,
+          'newPassword': newPassword,
+        },
+      );
 
-    final responseData = json.decode(response.body);
-    
-    if (response.statusCode == 200) {
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } else {
-      _errorMessage = responseData['message'] ?? 'Failed to reset password';
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200) {
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = responseData['message'] ?? 'Failed to reset password';
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+    } catch (error) {
+      _errorMessage = 'Something went wrong. Please try again later.';
       _isLoading = false;
       notifyListeners();
       return false;
     }
-  } catch (error) {
-    _errorMessage = 'Something went wrong. Please try again later.';
-    _isLoading = false;
-    notifyListeners();
-    return false;
   }
-}
-    // Logout method
+
+  // NEW METHOD: Update user profile
+  Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> updatedData) async {
+    _isLoading = true;
+    _errorMessage = '';
+    notifyListeners();
+
+    if (_phoneNumber == null || _token == null) {
+      _isLoading = false;
+      _errorMessage = 'Not authenticated';
+      notifyListeners();
+      return {
+        'success': false, 
+        'message': 'Not authenticated'
+      };
+    }
+    
+    try {
+      final url = Uri.parse('${getBaseUrl()}/api/users/update-profile?phoneNumber=$_phoneNumber');
+      
+      final response = await http.put(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+        body: json.encode(updatedData),
+      );
+
+      final responseData = json.decode(response.body);
+      
+      if (response.statusCode == 200) {
+        _isLoading = false;
+        notifyListeners();
+        return {
+          'success': true,
+          'data': responseData
+        };
+      } else if (response.statusCode == 401) {
+        // Token expired, logout
+        await logout();
+        _errorMessage = 'Authentication expired. Please login again.';
+        _isLoading = false;
+        notifyListeners();
+        return {
+          'success': false,
+          'message': 'Authentication expired'
+        };
+      } else {
+        _errorMessage = responseData['message'] ?? 'Failed to update profile';
+        _isLoading = false;
+        notifyListeners();
+        return {
+          'success': false,
+          'message': _errorMessage
+        };
+      }
+    } catch (error) {
+      _errorMessage = 'Something went wrong. Please try again later.';
+      _isLoading = false;
+      notifyListeners();
+      return {
+        'success': false,
+        'message': _errorMessage
+      };
+    }
+  }
+
+  // NEW METHOD: Fetch user profile
+  Future<Map<String, dynamic>> fetchUserProfile() async {
+    _isLoading = true;
+    _errorMessage = '';
+    notifyListeners();
+
+    if (_phoneNumber == null || _token == null) {
+      _isLoading = false;
+      _errorMessage = 'Not authenticated';
+      notifyListeners();
+      return {
+        'success': false, 
+        'message': 'Not authenticated'
+      };
+    }
+    
+    try {
+      final url = Uri.parse('${getBaseUrl()}/api/users/profile?phoneNumber=$_phoneNumber');
+      
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $_token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        _isLoading = false;
+        notifyListeners();
+        return {
+          'success': true,
+          'data': data
+        };
+      } else if (response.statusCode == 401) {
+        // Token expired, logout
+        await logout();
+        _errorMessage = 'Authentication expired. Please login again.';
+        _isLoading = false;
+        notifyListeners();
+        return {
+          'success': false,
+          'message': 'Authentication expired'
+        };
+      } else {
+        final data = json.decode(response.body);
+        _errorMessage = data['message'] ?? 'Failed to load profile';
+        _isLoading = false;
+        notifyListeners();
+        return {
+          'success': false,
+          'message': _errorMessage
+        };
+      }
+    } catch (error) {
+      _errorMessage = 'Something went wrong. Please try again later.';
+      _isLoading = false;
+      notifyListeners();
+      return {
+        'success': false,
+        'message': _errorMessage
+      };
+    }
+  }
+
+  // Logout method
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
